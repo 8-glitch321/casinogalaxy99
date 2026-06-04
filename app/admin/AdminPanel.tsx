@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import type {
-  CasinoOffer,
+  Casino,
   LanguageCode,
   LinkItem,
   SiteContent,
@@ -57,6 +57,39 @@ const sections: Array<{
 
 function cloneContent(content: SiteContent): SiteContent {
   return JSON.parse(JSON.stringify(content)) as SiteContent;
+}
+
+function createCasinoId(casinos: Casino[]) {
+  const nextIdNumber =
+    casinos.reduce((highest, casino) => {
+      const idNumber = Number.parseInt(casino.id.replace(/\D/g, ""), 10);
+      return Number.isFinite(idNumber) ? Math.max(highest, idNumber) : highest;
+    }, 0) + 1;
+
+  return `casino-${nextIdNumber}`;
+}
+
+function createEmptyCasino(casinos: Casino[]): Casino {
+  const nextOrder =
+    casinos.reduce((highest, casino) => Math.max(highest, casino.order || 0), 0) + 1;
+
+  return {
+    id: createCasinoId(casinos),
+    name: "",
+    logoUrl: "",
+    bonus: "",
+    description1: "",
+    description2: "",
+    feature1: "",
+    feature2: "",
+    feature3: "",
+    feature4: "",
+    buttonText: "JETZT SPIELEN",
+    buttonLink: "",
+    detailsText: "",
+    order: nextOrder,
+    active: true,
+  };
 }
 
 function fieldId(label: string) {
@@ -253,16 +286,27 @@ async function resizeImage(
   }
 
   if (fit === "contain") {
-    const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
-    const targetWidth = Math.max(1, Math.round(image.naturalWidth * scale));
-    const targetHeight = Math.max(1, Math.round(image.naturalHeight * scale));
+    const crop = getLogoCrop(image);
+    const scale = Math.min(width / crop.width, height / crop.height);
+    const targetWidth = Math.max(1, Math.round(crop.width * scale));
+    const targetHeight = Math.max(1, Math.round(crop.height * scale));
 
     canvas.width = targetWidth;
     canvas.height = targetHeight;
 
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = "high";
-    context.drawImage(image, 0, 0, targetWidth, targetHeight);
+    context.drawImage(
+      image,
+      crop.x,
+      crop.y,
+      crop.width,
+      crop.height,
+      0,
+      0,
+      targetWidth,
+      targetHeight,
+    );
   } else {
     canvas.width = width;
     canvas.height = height;
@@ -299,6 +343,86 @@ async function resizeImage(
   return blob;
 }
 
+function getLogoCrop(image: HTMLImageElement) {
+  const trimCanvas = document.createElement("canvas");
+  const trimContext = trimCanvas.getContext("2d", { willReadFrequently: true });
+  const width = image.naturalWidth;
+  const height = image.naturalHeight;
+
+  if (!trimContext || width < 4 || height < 4) {
+    return { x: 0, y: 0, width, height };
+  }
+
+  trimCanvas.width = width;
+  trimCanvas.height = height;
+  trimContext.drawImage(image, 0, 0);
+
+  const imageData = trimContext.getImageData(0, 0, width, height);
+  const data = imageData.data;
+  const cornerIndexes = [
+    0,
+    (width - 1) * 4,
+    (width * (height - 1)) * 4,
+    (width * height - 1) * 4,
+  ];
+  const background = cornerIndexes.reduce(
+    (color, index) => ({
+      red: color.red + data[index],
+      green: color.green + data[index + 1],
+      blue: color.blue + data[index + 2],
+      alpha: color.alpha + data[index + 3],
+    }),
+    { red: 0, green: 0, blue: 0, alpha: 0 },
+  );
+  const bg = {
+    red: background.red / cornerIndexes.length,
+    green: background.green / cornerIndexes.length,
+    blue: background.blue / cornerIndexes.length,
+    alpha: background.alpha / cornerIndexes.length,
+  };
+
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+      const alpha = data[index + 3];
+      const distance =
+        Math.abs(data[index] - bg.red) +
+        Math.abs(data[index + 1] - bg.green) +
+        Math.abs(data[index + 2] - bg.blue) +
+        Math.abs(alpha - bg.alpha) * 0.5;
+
+      if (alpha > 12 && distance > 28) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+
+  if (maxX < minX || maxY < minY) {
+    return { x: 0, y: 0, width, height };
+  }
+
+  const padding = 3;
+  const x = Math.max(0, minX - padding);
+  const y = Math.max(0, minY - padding);
+  const cropWidth = Math.min(width - x, maxX - minX + 1 + padding * 2);
+  const cropHeight = Math.min(height - y, maxY - minY + 1 + padding * 2);
+
+  return {
+    x,
+    y,
+    width: cropWidth,
+    height: cropHeight,
+  };
+}
+
 export default function AdminPanel({
   isAuthenticated,
 }: {
@@ -312,6 +436,7 @@ export default function AdminPanel({
   const [saving, setSaving] = useState(false);
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
   const [loading, setLoading] = useState(isAuthenticated);
+  const [openCasinoIds, setOpenCasinoIds] = useState<string[]>([]);
 
   const activeTitle = useMemo(
     () => sections.find((section) => section.id === activeSection)?.label,
@@ -528,17 +653,122 @@ export default function AdminPanel({
     setContent(next);
   }
 
-  function setOffer(
-    offerIndex: number,
-    updater: (offer: CasinoOffer) => CasinoOffer,
+  function toggleCasino(casinoId: string) {
+    setOpenCasinoIds((current) =>
+      current.includes(casinoId)
+        ? current.filter((id) => id !== casinoId)
+        : [...current, casinoId],
+    );
+  }
+
+  function setCasino(
+    casinoIndex: number,
+    updater: (casino: Casino) => Casino,
   ) {
-    if (!content) {
-      return;
+    setContent((currentContent) => {
+      if (!currentContent?.casinos[casinoIndex]) {
+        return currentContent;
+      }
+
+      const next = cloneContent(currentContent);
+      next.casinos[casinoIndex] = updater(next.casinos[casinoIndex]);
+      return next;
+    });
+  }
+
+  function addCasino() {
+    let newCasinoId = "";
+
+    setContent((currentContent) => {
+      if (!currentContent) {
+        return currentContent;
+      }
+
+      const casino = createEmptyCasino(currentContent.casinos);
+      newCasinoId = casino.id;
+
+      return {
+        ...currentContent,
+        casinos: [...currentContent.casinos, casino],
+      };
+    });
+
+    if (newCasinoId) {
+      setOpenCasinoIds((current) => [...current, newCasinoId]);
     }
 
-    const next = cloneContent(content);
-    next.offers[offerIndex] = updater(next.offers[offerIndex]);
-    setContent(next);
+    setStatus({
+      type: "success",
+      message:
+        "Neues leeres Casino wurde hinzugefuegt. Bitte ausfuellen und speichern.",
+    });
+  }
+
+  function duplicateCasino(casinoIndex: number) {
+    let duplicateId = "";
+
+    setContent((currentContent) => {
+      if (!currentContent?.casinos[casinoIndex]) {
+        return currentContent;
+      }
+
+      const source = currentContent.casinos[casinoIndex];
+      const nextOrder =
+        currentContent.casinos.reduce(
+          (highest, casino) => Math.max(highest, casino.order || 0),
+          0,
+        ) + 1;
+      const duplicate: Casino = {
+        ...source,
+        id: createCasinoId(currentContent.casinos),
+        name: source.name ? `${source.name} Kopie` : "",
+        order: nextOrder,
+      };
+      duplicateId = duplicate.id;
+
+      return {
+        ...currentContent,
+        casinos: [...currentContent.casinos, duplicate],
+      };
+    });
+
+    if (duplicateId) {
+      setOpenCasinoIds((current) => [...current, duplicateId]);
+    }
+
+    setStatus({
+      type: "success",
+      message: "Casino wurde dupliziert. Bitte pruefen und speichern.",
+    });
+  }
+
+  function deleteCasino(casinoIndex: number) {
+    let casinoName = `Casino ${casinoIndex + 1}`;
+    let deletedId = "";
+
+    setContent((currentContent) => {
+      if (!currentContent?.casinos[casinoIndex]) {
+        return currentContent;
+      }
+
+      const casino = currentContent.casinos[casinoIndex];
+      casinoName = casino.name || `Casino ${casinoIndex + 1}`;
+      deletedId = casino.id;
+
+      return {
+        ...currentContent,
+        casinos: currentContent.casinos.filter((_, index) => index !== casinoIndex),
+      };
+    });
+
+    if (deletedId) {
+      setOpenCasinoIds((current) => current.filter((id) => id !== deletedId));
+    }
+
+    setStatus({
+      type: "success",
+      message: `${casinoName} wurde entfernt. Bitte speichern, damit es auch auf der Seite verschwindet.`,
+    });
   }
 
   async function handleImageUpload(config: ImageUploadConfig, file: File) {
@@ -645,11 +875,11 @@ export default function AdminPanel({
   }
 
   return (
-    <main className="relative z-10 min-h-screen bg-[#030106] px-3 py-0 text-white [scrollbar-gutter:stable_both-edges] sm:px-5 lg:h-screen lg:overflow-hidden lg:px-8">
+    <main className="relative z-10 min-h-screen bg-[#030106] px-3 py-0 text-white [scrollbar-gutter:stable_both-edges] sm:px-5 lg:px-8">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(118deg,rgba(155,60,255,0.14),transparent_36%),linear-gradient(242deg,rgba(255,191,46,0.07),transparent_32%),repeating-linear-gradient(90deg,rgba(255,255,255,0.022)_0_1px,transparent_1px_92px)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[linear-gradient(180deg,rgba(193,92,255,0.18),transparent)]" />
       <div className="relative mx-auto grid w-full max-w-[1500px] gap-5 py-4 lg:h-full lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start lg:py-0">
-        <aside className="w-full overflow-y-auto rounded-3xl border border-violet-200/15 bg-[linear-gradient(180deg,rgba(18,8,30,0.96),rgba(6,2,12,0.96))] p-3 shadow-[0_30px_110px_rgba(0,0,0,0.44)] ring-1 ring-white/[0.04] backdrop-blur-xl lg:sticky lg:top-0 lg:h-screen lg:min-w-72 lg:rounded-none lg:border-y-0">
+        <aside className="w-full overflow-y-auto rounded-3xl border border-violet-200/15 bg-[linear-gradient(180deg,rgba(18,8,30,0.96),rgba(6,2,12,0.96))] p-3 shadow-[0_30px_110px_rgba(0,0,0,0.44)] ring-1 ring-white/[0.04] backdrop-blur-xl lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:min-w-72">
           <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.035] px-4 py-5">
             <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-[#ffbf2e]/70 to-transparent" />
             <p className="text-xs font-black uppercase tracking-[0.24em] text-[#ffbf2e]">
@@ -703,8 +933,8 @@ export default function AdminPanel({
           </nav>
         </aside>
 
-        <section className="min-w-0 w-full overflow-hidden rounded-3xl border border-violet-200/15 bg-[linear-gradient(180deg,rgba(11,4,18,0.92),rgba(4,1,8,0.96))] shadow-[0_30px_110px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.04] backdrop-blur-xl lg:my-4 lg:flex lg:h-[calc(100vh-2rem)] lg:flex-col">
-          <header className="sticky top-0 z-20 flex flex-col gap-4 border-b border-violet-200/15 bg-[#090411]/90 p-5 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+        <section className="min-w-0 w-full overflow-hidden rounded-3xl border border-violet-200/15 bg-[linear-gradient(180deg,rgba(11,4,18,0.92),rgba(4,1,8,0.96))] shadow-[0_30px_110px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.04] backdrop-blur-xl lg:my-4">
+          <header className="sticky top-0 z-20 flex shrink-0 flex-col gap-4 border-b border-violet-200/15 bg-[#090411]/90 p-5 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.24em] text-[#ffbf2e]">
@@ -736,7 +966,7 @@ export default function AdminPanel({
             </div>
           </header>
 
-          <div className="mx-auto grid w-full max-w-5xl content-start gap-5 p-4 sm:p-5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:p-6">
+          <div className="mx-auto grid w-full max-w-5xl content-start gap-5 p-4 pb-28 sm:p-5 sm:pb-28 lg:p-6 lg:pb-28">
             {activeSection === "dashboard" ? renderDashboard(content) : null}
             {activeSection === "brand"
               ? renderBrand(
@@ -779,7 +1009,12 @@ export default function AdminPanel({
             {activeSection === "casinos"
               ? renderCasinos(
                   content,
-                  setOffer,
+                  addCasino,
+                  deleteCasino,
+                  duplicateCasino,
+                  setCasino,
+                  toggleCasino,
+                  openCasinoIds,
                   handleImageUpload,
                   uploadingSlot,
                 )
@@ -842,7 +1077,7 @@ function renderDashboard(content: SiteContent) {
         <MetricCard
           detail="bearbeitbare Bonus-Angebote"
           label="Casino Karten"
-          value={String(content.offers.length)}
+          value={String(content.casinos.length)}
         />
         <MetricCard detail="Deutsch und Englisch" label="Sprachen" value="2" />
         <MetricCard
@@ -1443,154 +1678,267 @@ function renderFooter(
 
 function renderCasinos(
   content: SiteContent,
-  setOffer: (
-    offerIndex: number,
-    updater: (offer: CasinoOffer) => CasinoOffer,
+  addCasino: () => void,
+  deleteCasino: (casinoIndex: number) => void,
+  duplicateCasino: (casinoIndex: number) => void,
+  setCasino: (
+    casinoIndex: number,
+    updater: (casino: Casino) => Casino,
   ) => void,
+  toggleCasino: (casinoId: string) => void,
+  openCasinoIds: string[],
   handleImageUpload: (config: ImageUploadConfig, file: File) => Promise<void>,
   uploadingSlot: string | null,
 ) {
+  const activeCount = content.casinos.filter((casino) => casino.active).length;
+
   return (
-    <Card title="Casino / Bonus Links" subtitle="Karten, Logos, Bonuscodes und CTA Links.">
+    <Card
+      title="Casino Boni"
+      subtitle="Beliebig viele Casino Cards erstellen, sortieren, deaktivieren oder entfernen."
+    >
       <div className="grid gap-5">
-        {content.offers.map((offer, index) => (
-          <article
-            className="grid gap-4 rounded-2xl border border-violet-200/15 bg-[#050208]/60 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
-            key={offer.id}
+        <div className="flex flex-col gap-3 rounded-2xl border border-[#ffbf2e]/20 bg-[#ffbf2e]/8 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-black text-white">
+              {activeCount} von {content.casinos.length} Casino
+              {content.casinos.length === 1 ? "" : "s"} aktiv
+            </p>
+            <p className="mt-1 text-sm text-[#ffe8a7]">
+              Neue Casinos starten leer und erscheinen nach dem Speichern automatisch auf der Startseite.
+            </p>
+          </div>
+          <button
+            className="min-h-11 rounded-xl bg-[linear-gradient(180deg,#ffe577,#ffbf2e_54%,#df7412)] px-5 text-sm font-black uppercase tracking-[0.08em] text-[#170b00] shadow-[0_16px_42px_rgba(255,191,46,0.2)] transition hover:brightness-110"
+            onClick={addCasino}
+            type="button"
           >
-            <h3 className="text-base font-black text-white">Casino {index + 1}</h3>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <Field
-                label="Logo Text"
-                value={offer.logoText}
-                onChange={(value) =>
-                  setOffer(index, (current) => ({ ...current, logoText: value }))
-                }
-              />
-              <Field
-                label="Logo URL"
-                value={offer.logoUrl}
-                onChange={(value) =>
-                  setOffer(index, (current) => ({ ...current, logoUrl: value }))
-                }
-              />
-              <div className="md:col-span-2 xl:col-span-3">
-                <ImageUploadField
-                  config={{
-                    height: 360,
-                    label: `Casino ${index + 1} Logo automatisch anpassen`,
-                    onUploaded: (url) =>
-                      setOffer(index, (current) => ({
-                        ...current,
-                        logoUrl: url,
-                      })),
-                    slot: `casino-logo-${index + 1}`,
-                    value: offer.logoUrl,
-                    width: 640,
-                    fit: "contain",
-                  }}
-                  disabled={uploadingSlot === `casino-logo-${index + 1}`}
-                  onUpload={handleImageUpload}
-                />
+            + Neues Casino hinzufuegen
+          </button>
+        </div>
+
+        {content.casinos.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-violet-200/25 bg-[#050208]/50 p-8 text-center">
+            <p className="text-lg font-black text-white">Keine Casino-Karten vorhanden</p>
+            <p className="mt-2 text-sm text-[#cfc2dc]">
+              Fuege ein neues Casino hinzu, damit es auf der Startseite angezeigt wird.
+            </p>
+          </div>
+        ) : null}
+
+        {content.casinos.map((casino, index) => {
+          const isOpen =
+            openCasinoIds.includes(casino.id) ||
+            (openCasinoIds.length === 0 && index === 0);
+          const uploadSlot = `casino-logo-${casino.id.replace(/[^a-z0-9-]/gi, "-")}`;
+
+          return (
+            <article
+              className="overflow-hidden rounded-2xl border border-violet-200/15 bg-[#050208]/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+              key={casino.id}
+            >
+              <div className="flex flex-col gap-3 border-b border-white/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <button
+                  className="grid min-w-0 flex-1 grid-cols-[52px_minmax(0,1fr)] items-center gap-3 text-left"
+                  onClick={() => toggleCasino(casino.id)}
+                  type="button"
+                >
+                  <span className="grid h-12 w-12 place-items-center rounded-xl border border-[#ffbf2e]/25 bg-[#ffbf2e]/10 text-sm font-black text-[#ffdf79]">
+                    {casino.order || index + 1}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-black uppercase tracking-[0.18em] text-[#ffbf2e]">
+                      Casino Preset {index + 1}
+                    </span>
+                    <span className="mt-1 block truncate text-lg font-black text-white">
+                      {casino.name || "Neues Casino"}
+                    </span>
+                    <span className="mt-1 block text-xs font-bold text-[#9f91b1]">
+                      {casino.active ? "Aktiv auf der Website" : "Inaktiv / ausgeblendet"}
+                    </span>
+                  </span>
+                </button>
+                <div className="flex flex-wrap gap-2 sm:justify-end">
+                  <button
+                    className="min-h-10 rounded-xl border border-violet-200/20 bg-white/[0.04] px-4 text-xs font-black uppercase tracking-[0.08em] text-white transition hover:bg-white/[0.08]"
+                    onClick={() => toggleCasino(casino.id)}
+                    type="button"
+                  >
+                    {isOpen ? "Zuklappen" : "Bearbeiten"}
+                  </button>
+                  <button
+                    className="min-h-10 rounded-xl border border-[#ffbf2e]/25 bg-[#ffbf2e]/10 px-4 text-xs font-black uppercase tracking-[0.08em] text-[#ffe8a7] transition hover:bg-[#ffbf2e]/16"
+                    onClick={() => duplicateCasino(index)}
+                    type="button"
+                  >
+                    Duplizieren
+                  </button>
+                  <button
+                    className="min-h-10 rounded-xl border border-red-300/25 bg-red-400/10 px-4 text-xs font-black uppercase tracking-[0.08em] text-red-200 transition hover:bg-red-400/18"
+                    onClick={() => deleteCasino(index)}
+                    type="button"
+                  >
+                    Loeschen
+                  </button>
+                </div>
               </div>
-              <Field
-                label="Titel"
-                value={offer.title}
-                onChange={(value) =>
-                  setOffer(index, (current) => ({ ...current, title: value }))
-                }
-              />
-              <Field
-                label="Highlight"
-                value={offer.highlight}
-                onChange={(value) =>
-                  setOffer(index, (current) => ({ ...current, highlight: value }))
-                }
-              />
-              <Field
-                label="Untertitel"
-                value={offer.subtitle}
-                onChange={(value) =>
-                  setOffer(index, (current) => ({ ...current, subtitle: value }))
-                }
-              />
-              <Field
-                label="Casino Link"
-                value={offer.playHref}
-                onChange={(value) =>
-                  setOffer(index, (current) => ({ ...current, playHref: value }))
-                }
-              />
-              <Field
-                label="Code Label"
-                value={offer.codeLabel}
-                onChange={(value) =>
-                  setOffer(index, (current) => ({ ...current, codeLabel: value }))
-                }
-              />
-              <Field
-                label="Code Wert"
-                value={offer.codeValue}
-                onChange={(value) =>
-                  setOffer(index, (current) => ({ ...current, codeValue: value }))
-                }
-              />
-              <Field
-                label="Bonus Label"
-                value={offer.bonusLabel}
-                onChange={(value) =>
-                  setOffer(index, (current) => ({
-                    ...current,
-                    bonusLabel: value,
-                  }))
-                }
-              />
-              <Field
-                label="Bonus Wert"
-                value={offer.bonusValue}
-                onChange={(value) =>
-                  setOffer(index, (current) => ({
-                    ...current,
-                    bonusValue: value,
-                  }))
-                }
-              />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {offer.perks.map((perk, perkIndex) => (
-                <Field
-                  key={`${offer.id}-perk-${perkIndex}`}
-                  label={`Perk ${perkIndex + 1}`}
-                  value={perk}
-                  onChange={(value) =>
-                    setOffer(index, (current) => {
-                      const perks = [...current.perks];
-                      perks[perkIndex] = value;
-                      return { ...current, perks };
-                    })
-                  }
-                />
-              ))}
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              {offer.details.map((detail, detailIndex) => (
-                <Field
-                  key={`${offer.id}-detail-${detailIndex}`}
-                  label={`Detail Text ${detailIndex + 1}`}
-                  textarea
-                  value={detail}
-                  onChange={(value) =>
-                    setOffer(index, (current) => {
-                      const details = [...current.details];
-                      details[detailIndex] = value;
-                      return { ...current, details };
-                    })
-                  }
-                />
-              ))}
-            </div>
-          </article>
-        ))}
+
+              {isOpen ? (
+                <div className="grid gap-5 p-4">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <Field
+                      label="Casino Name"
+                      value={casino.name}
+                      onChange={(value) =>
+                        setCasino(index, (current) => ({ ...current, name: value }))
+                      }
+                    />
+                    <Field
+                      label="Logo/Bild URL"
+                      value={casino.logoUrl}
+                      onChange={(value) =>
+                        setCasino(index, (current) => ({ ...current, logoUrl: value }))
+                      }
+                    />
+                    <Field
+                      label="Bonus Text"
+                      value={casino.bonus}
+                      onChange={(value) =>
+                        setCasino(index, (current) => ({ ...current, bonus: value }))
+                      }
+                    />
+                    <Field
+                      label="Beschreibung Zeile 1"
+                      value={casino.description1}
+                      onChange={(value) =>
+                        setCasino(index, (current) => ({
+                          ...current,
+                          description1: value,
+                        }))
+                      }
+                    />
+                    <Field
+                      label="Beschreibung Zeile 2"
+                      value={casino.description2}
+                      onChange={(value) =>
+                        setCasino(index, (current) => ({
+                          ...current,
+                          description2: value,
+                        }))
+                      }
+                    />
+                    <Field
+                      label="Ranking/Reihenfolge"
+                      value={String(casino.order)}
+                      onChange={(value) =>
+                        setCasino(index, (current) => ({
+                          ...current,
+                          order: Number.parseInt(value, 10) || 0,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <ImageUploadField
+                    config={{
+                      height: 360,
+                      label: `Casino ${index + 1} Logo automatisch anpassen`,
+                      onUploaded: (url) =>
+                        setCasino(index, (current) => ({
+                          ...current,
+                          logoUrl: url,
+                        })),
+                      slot: uploadSlot,
+                      value: casino.logoUrl,
+                      width: 640,
+                      fit: "contain",
+                    }}
+                    disabled={uploadingSlot === uploadSlot}
+                    onUpload={handleImageUpload}
+                  />
+
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    {(["feature1", "feature2", "feature3", "feature4"] as const).map(
+                      (field, featureIndex) => (
+                        <Field
+                          key={`${casino.id}-${field}`}
+                          label={`Feature ${featureIndex + 1}`}
+                          value={casino[field]}
+                          onChange={(value) =>
+                            setCasino(index, (current) => ({
+                              ...current,
+                              [field]: value,
+                            }))
+                          }
+                        />
+                      ),
+                    )}
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Field
+                      label="Button Text"
+                      value={casino.buttonText}
+                      onChange={(value) =>
+                        setCasino(index, (current) => ({
+                          ...current,
+                          buttonText: value,
+                        }))
+                      }
+                    />
+                    <Field
+                      label="Button Link"
+                      value={casino.buttonLink}
+                      onChange={(value) =>
+                        setCasino(index, (current) => ({
+                          ...current,
+                          buttonLink: value,
+                        }))
+                      }
+                    />
+                  </div>
+
+                  <Field
+                    label="Details Text"
+                    textarea
+                    value={casino.detailsText}
+                    onChange={(value) =>
+                      setCasino(index, (current) => ({
+                        ...current,
+                        detailsText: value,
+                      }))
+                    }
+                  />
+
+                  <div className="flex flex-col gap-3 rounded-2xl border border-violet-200/15 bg-black/24 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-black text-white">Website Status</p>
+                      <p className="mt-1 text-sm text-[#9f91b1]">
+                        Inaktive Casinos bleiben gespeichert, werden aber nicht angezeigt.
+                      </p>
+                    </div>
+                    <button
+                      className={`min-h-11 rounded-xl px-5 text-sm font-black uppercase tracking-[0.08em] transition ${
+                        casino.active
+                          ? "bg-emerald-300/15 text-emerald-200 ring-1 ring-emerald-300/25"
+                          : "bg-red-400/10 text-red-200 ring-1 ring-red-300/25"
+                      }`}
+                      onClick={() =>
+                        setCasino(index, (current) => ({
+                          ...current,
+                          active: !current.active,
+                        }))
+                      }
+                      type="button"
+                    >
+                      {casino.active ? "Aktiv" : "Inaktiv"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </article>
+          );
+        })}
       </div>
     </Card>
   );

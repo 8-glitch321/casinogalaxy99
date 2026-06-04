@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
-import type { CasinoOffer, LanguageCode, SiteContent } from "@/lib/siteContent";
+import type { Casino, LanguageCode, SiteContent } from "@/lib/siteContent";
 
 const languages = [
   { label: "Deutsch", code: "DE" },
@@ -334,61 +334,71 @@ function HeroIcon({ type }: { type: string }) {
 }
 
 function OfferCard({
-  offer,
+  casino,
   detailsLabel,
   playLabel,
 }: {
-  offer: CasinoOffer;
+  casino: Casino;
   detailsLabel: string;
   playLabel: string;
 }) {
-  const toggleId = `offer-toggle-${offer.id}`;
+  const toggleId = `offer-toggle-${casino.id}`;
+  const features = [
+    casino.feature1,
+    casino.feature2,
+    casino.feature3,
+    casino.feature4,
+  ];
+  const details = casino.detailsText
+    .split(/\r?\n/)
+    .map((detail) => detail.trim())
+    .filter(Boolean);
 
   return (
     <article className="offer-card">
       <input className="offer-toggle" id={toggleId} type="checkbox" />
       <div className="offer-main">
         <div className="casino-logo flex h-full w-full items-center justify-center p-[2px]">
-          {offer.logoUrl ? (
+          {casino.logoUrl ? (
             <img
-              src={offer.logoUrl}
-              alt={offer.logoText || offer.title}
-              className="h-full w-full object-fill"
+              src={casino.logoUrl}
+              alt={casino.name || "Casino Logo"}
+              className="h-full w-full object-contain"
             />
           ) : (
-            offer.logoText
+            "SOON"
           )}
         </div>
 
         <div className="bonus-title">
-          <span className="text-slot">{offer.title}</span>
-          <strong className="big-slot">{offer.highlight}</strong>
-          <small className="text-slot">{offer.subtitle}</small>
+          <span className="text-slot">{casino.name || "-"}</span>
+          <strong className="big-slot">{casino.bonus || "-"}</strong>
+          <small className="text-slot">{casino.description1 || "-"}</small>
         </div>
 
         <div className="code-stack" aria-label="Bonus codes">
           <div>
-            <span className="text-slot">{offer.codeLabel}</span>
-            <strong className="text-slot">{offer.codeValue}</strong>
+            <span className="text-slot">{casino.description1 || "-"}</span>
+            <strong className="text-slot">{casino.description2 || "-"}</strong>
           </div>
           <div>
-            <span className="text-slot">{offer.bonusLabel}</span>
-            <strong className="text-slot">{offer.bonusValue}</strong>
+            <span className="text-slot">{casino.name || "-"}</span>
+            <strong className="text-slot">{casino.bonus || "-"}</strong>
           </div>
         </div>
 
         <div className="offer-perks" aria-label="Bonus details">
-          {offer.perks.map((perk, index) => (
-            <div key={`${offer.id}-perk-${index}`}>
+          {features.map((perk, index) => (
+            <div key={`${casino.id}-feature-${index}`}>
               <span className="perk-icon">{["+", "%", "=", "x"][index] ?? "+"}</span>
-              <strong className="text-slot">{perk}</strong>
+              <strong className="text-slot">{perk || "-"}</strong>
             </div>
           ))}
         </div>
 
         <div className="offer-actions">
-          <a href={offer.playHref || "#bonus"} className="play-button">
-            <span>{playLabel}</span>
+          <a href={casino.buttonLink || "#bonus"} className="play-button">
+            <span>{casino.buttonText || playLabel}</span>
           </a>
           <label className="details-button" htmlFor={toggleId}>
             <span>{detailsLabel}</span>
@@ -399,8 +409,8 @@ function OfferCard({
 
       <div className="offer-copy">
         <div>
-          {offer.details.map((detail, index) => (
-            <p key={`${offer.id}-detail-${index}`}>{detail}</p>
+          {(details.length > 0 ? details : ["-"]).map((detail, index) => (
+            <p key={`${casino.id}-detail-${index}`}>{detail}</p>
           ))}
         </div>
       </div>
@@ -442,6 +452,9 @@ export default function HomePage({ content }: { content: SiteContent }) {
   const [languageOpen, setLanguageOpen] = useState(false);
   const [ageGateOpen, setAgeGateOpen] = useState(true);
   const copy = content.translations[selectedLanguage];
+  const activeCasinos = content.casinos
+    .filter((casino) => casino.active)
+    .sort((left, right) => left.order - right.order);
   const brandAlt = `${content.brand.name} Profilbild`;
   const colorVars = {
     "--background": content.colors.background,
@@ -633,11 +646,11 @@ export default function HomePage({ content }: { content: SiteContent }) {
       </section>
 
       <section className="offers-grid" aria-label="Casino Bonusangebote">
-        {content.offers.map((offer) => (
+        {activeCasinos.map((casino) => (
           <OfferCard
             detailsLabel={copy.detailsOffer}
-            key={offer.id}
-            offer={offer}
+            key={casino.id}
+            casino={casino}
             playLabel={copy.playOffer}
           />
         ))}

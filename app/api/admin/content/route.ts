@@ -32,7 +32,12 @@ export async function PUT(request: Request) {
 
   const content = (await request.json().catch(() => null)) as SiteContent | null;
 
-  if (!content?.brand?.name || !content.translations?.DE || !content.translations?.EN) {
+  if (
+    !content?.brand?.name ||
+    !content.translations?.DE ||
+    !content.translations?.EN ||
+    !Array.isArray(content.casinos)
+  ) {
     return NextResponse.json(
       { error: "Die gesendeten Inhalte sind unvollständig." },
       { status: 400 },

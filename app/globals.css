@@ -1422,10 +1422,7 @@ a {
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
-  background:
-    radial-gradient(circle at 50% 36%, rgba(255, 255, 255, 0.16), transparent 34%),
-    linear-gradient(145deg, rgba(189, 92, 255, 0.12), transparent 58%),
-    #14131a;
+  background: #050208;
   color: rgba(255, 255, 255, 0.62);
   font-size: 15px;
   font-weight: 850;
@@ -1449,7 +1446,7 @@ a {
   height: 100%;
   max-width: 100%;
   max-height: 100%;
-  object-fit: fill;
+  object-fit: contain;
   object-position: center;
   border-radius: 4px;
 }

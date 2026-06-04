@@ -48,121 +48,23 @@
       }
     ]
   },
-  "offers": [
+  "casinos": [
     {
       "id": "offer-1",
-      "logoText": "SOON",
-      "logoUrl": "/uploads/admin/casino-logo-1.webp?v=1780590663496",
-      "title": "FRESHBET",
-      "highlight": "300%",
-      "subtitle": "",
-      "codeLabel": "-",
-      "codeValue": "-",
-      "bonusLabel": "-",
-      "bonusValue": "-",
-      "perks": [
-        "-",
-        "-",
-        "-",
-        "-"
-      ],
-      "playHref": "#bonus",
-      "details": [
-        "-",
-        "-"
-      ]
-    },
-    {
-      "id": "offer-2",
-      "logoText": "SOON",
-      "logoUrl": "",
-      "title": "-",
-      "highlight": "-",
-      "subtitle": "-",
-      "codeLabel": "-",
-      "codeValue": "-",
-      "bonusLabel": "-",
-      "bonusValue": "-",
-      "perks": [
-        "-",
-        "-",
-        "-",
-        "-"
-      ],
-      "playHref": "#bonus",
-      "details": [
-        "-",
-        "-"
-      ]
-    },
-    {
-      "id": "offer-3",
-      "logoText": "SOON",
-      "logoUrl": "",
-      "title": "-",
-      "highlight": "-",
-      "subtitle": "-",
-      "codeLabel": "-",
-      "codeValue": "-",
-      "bonusLabel": "-",
-      "bonusValue": "-",
-      "perks": [
-        "-",
-        "-",
-        "-",
-        "-"
-      ],
-      "playHref": "#bonus",
-      "details": [
-        "-",
-        "-"
-      ]
-    },
-    {
-      "id": "offer-4",
-      "logoText": "SOON",
-      "logoUrl": "",
-      "title": "-",
-      "highlight": "-",
-      "subtitle": "-",
-      "codeLabel": "-",
-      "codeValue": "-",
-      "bonusLabel": "-",
-      "bonusValue": "-",
-      "perks": [
-        "-",
-        "-",
-        "-",
-        "-"
-      ],
-      "playHref": "#bonus",
-      "details": [
-        "-",
-        "-"
-      ]
-    },
-    {
-      "id": "offer-5",
-      "logoText": "SOON",
-      "logoUrl": "",
-      "title": "-",
-      "highlight": "-",
-      "subtitle": "-",
-      "codeLabel": "-",
-      "codeValue": "-",
-      "bonusLabel": "-",
-      "bonusValue": "-",
-      "perks": [
-        "-",
-        "-",
-        "-",
-        "-"
-      ],
-      "playHref": "#bonus",
-      "details": [
-        "-",
-        "-"
-      ]
+      "name": "FRESHBET",
+      "logoUrl": "/uploads/admin/casino-logo-1.webp?v=1780590663497",
+      "bonus": "300%",
+      "description1": "-",
+      "description2": "-",
+      "feature1": "-",
+      "feature2": "-",
+      "feature3": "-",
+      "feature4": "-",
+      "buttonText": "JETZT SPIELEN",
+      "buttonLink": "#bonus",
+      "detailsText": "-\n-",
+      "order": 1,
+      "active": true
     }
   ],
   "translations": {

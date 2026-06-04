@@ -34,6 +34,24 @@ export type CasinoOffer = {
   details: string[];
 };
 
+export type Casino = {
+  id: string;
+  name: string;
+  logoUrl: string;
+  bonus: string;
+  description1: string;
+  description2: string;
+  feature1: string;
+  feature2: string;
+  feature3: string;
+  feature4: string;
+  buttonText: string;
+  buttonLink: string;
+  detailsText: string;
+  order: number;
+  active: boolean;
+};
+
 export type TranslationContent = {
   nav: [string, string, string];
   heroEyebrow: string;
@@ -91,7 +109,8 @@ export type SiteContent = {
     header: LinkItem[];
     footer: LinkItem[];
   };
-  offers: CasinoOffer[];
+  casinos: Casino[];
+  offers?: CasinoOffer[];
   translations: Record<LanguageCode, TranslationContent>;
 };
 
@@ -103,7 +122,34 @@ export const siteContentPath = path.join(
 
 export async function readSiteContent(): Promise<SiteContent> {
   const raw = await fs.readFile(siteContentPath, "utf8");
-  return JSON.parse(raw) as SiteContent;
+  return normalizeSiteContent(JSON.parse(raw) as SiteContent);
+}
+
+function normalizeSiteContent(content: SiteContent): SiteContent {
+  if (Array.isArray(content.casinos)) {
+    return content;
+  }
+
+  return {
+    ...content,
+    casinos: (content.offers ?? []).map((offer, index) => ({
+      id: offer.id,
+      name: offer.title === "-" ? "" : offer.title,
+      logoUrl: offer.logoUrl,
+      bonus: offer.highlight === "-" ? "" : offer.highlight,
+      description1: offer.codeLabel,
+      description2: offer.codeValue,
+      feature1: offer.perks[0] ?? "",
+      feature2: offer.perks[1] ?? "",
+      feature3: offer.perks[2] ?? "",
+      feature4: offer.perks[3] ?? "",
+      buttonText: "JETZT SPIELEN",
+      buttonLink: offer.playHref,
+      detailsText: offer.details.filter(Boolean).join("\n"),
+      order: index + 1,
+      active: true,
+    })),
+  };
 }
 
 export async function writeSiteContent(content: SiteContent) {

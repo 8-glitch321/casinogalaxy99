@@ -7,4 +7,5 @@ export default async function Page() {
   const content = await readSiteContent();
 
   return <HomePage content={content} />;
+
 }
