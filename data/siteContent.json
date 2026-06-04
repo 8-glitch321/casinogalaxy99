@@ -1,0 +1,328 @@
+{
+  "brand": {
+    "name": "CasinoGalaxy99",
+    "profileImageUrl": "/assets/casino-galaxy-profile.png",
+    "heroImageUrl": "/assets/casino-galaxy-hero.png",
+    "twitchUrl": "https://www.twitch.tv/casinogalaxy99"
+  },
+  "colors": {
+    "background": "#08030f",
+    "foreground": "#fbf7ff",
+    "violet": "#9b3cff",
+    "violetHot": "#c15cff",
+    "violetSoft": "#6f25d8",
+    "gold": "#ffbf2e",
+    "red": "#ff315f"
+  },
+  "links": {
+    "header": [
+      {
+        "label": "Twitch",
+        "href": "https://www.twitch.tv/casinogalaxy99"
+      },
+      {
+        "label": "Telegram",
+        "href": "https://t.me/casinogalaxy99"
+      },
+      {
+        "label": "Instagram",
+        "href": "#start"
+      }
+    ],
+    "footer": [
+      {
+        "label": "Telegram",
+        "href": "https://t.me/casinogalaxy99"
+      },
+      {
+        "label": "Instagram",
+        "href": "#start"
+      },
+      {
+        "label": "Twitch",
+        "href": "https://www.twitch.tv/casinogalaxy99"
+      },
+      {
+        "label": "Discord",
+        "href": "#start"
+      }
+    ]
+  },
+  "offers": [
+    {
+      "id": "offer-1",
+      "logoText": "SOON",
+      "logoUrl": "/uploads/admin/casino-logo-1.webp?v=1780590663496",
+      "title": "FRESHBET",
+      "highlight": "300%",
+      "subtitle": "",
+      "codeLabel": "-",
+      "codeValue": "-",
+      "bonusLabel": "-",
+      "bonusValue": "-",
+      "perks": [
+        "-",
+        "-",
+        "-",
+        "-"
+      ],
+      "playHref": "#bonus",
+      "details": [
+        "-",
+        "-"
+      ]
+    },
+    {
+      "id": "offer-2",
+      "logoText": "SOON",
+      "logoUrl": "",
+      "title": "-",
+      "highlight": "-",
+      "subtitle": "-",
+      "codeLabel": "-",
+      "codeValue": "-",
+      "bonusLabel": "-",
+      "bonusValue": "-",
+      "perks": [
+        "-",
+        "-",
+        "-",
+        "-"
+      ],
+      "playHref": "#bonus",
+      "details": [
+        "-",
+        "-"
+      ]
+    },
+    {
+      "id": "offer-3",
+      "logoText": "SOON",
+      "logoUrl": "",
+      "title": "-",
+      "highlight": "-",
+      "subtitle": "-",
+      "codeLabel": "-",
+      "codeValue": "-",
+      "bonusLabel": "-",
+      "bonusValue": "-",
+      "perks": [
+        "-",
+        "-",
+        "-",
+        "-"
+      ],
+      "playHref": "#bonus",
+      "details": [
+        "-",
+        "-"
+      ]
+    },
+    {
+      "id": "offer-4",
+      "logoText": "SOON",
+      "logoUrl": "",
+      "title": "-",
+      "highlight": "-",
+      "subtitle": "-",
+      "codeLabel": "-",
+      "codeValue": "-",
+      "bonusLabel": "-",
+      "bonusValue": "-",
+      "perks": [
+        "-",
+        "-",
+        "-",
+        "-"
+      ],
+      "playHref": "#bonus",
+      "details": [
+        "-",
+        "-"
+      ]
+    },
+    {
+      "id": "offer-5",
+      "logoText": "SOON",
+      "logoUrl": "",
+      "title": "-",
+      "highlight": "-",
+      "subtitle": "-",
+      "codeLabel": "-",
+      "codeValue": "-",
+      "bonusLabel": "-",
+      "bonusValue": "-",
+      "perks": [
+        "-",
+        "-",
+        "-",
+        "-"
+      ],
+      "playHref": "#bonus",
+      "details": [
+        "-",
+        "-"
+      ]
+    }
+  ],
+  "translations": {
+    "DE": {
+      "nav": [
+        "Start",
+        "Bonus",
+        "Story"
+      ],
+      "heroEyebrow": "Exklusive Casino Bonusangebote",
+      "heroTitleTop": "Casino",
+      "heroTitleBottom": "Galaxy 99",
+      "heroCopy": "Bonus-Hub für die Community von galaxycasino99: dunkel, galaktisch und bereit für die besten Deals.",
+      "primaryCta": "Bonus sichern",
+      "primaryCtaHref": "#bonus",
+      "secondaryCta": "Kanal ansehen",
+      "secondaryCtaHref": "https://www.twitch.tv/casinogalaxy99",
+      "playOffer": "Jetzt spielen",
+      "detailsOffer": "Details",
+      "ageKicker": "Willkommen bei",
+      "ageTitle": "Casino Galaxy 99",
+      "ageCopy": "Diese Seite richtet sich ausschließlich an Personen ab 18 Jahren.",
+      "ageNotice": "Bitte beachte die gesetzlichen Bestimmungen deines Aufenthaltsorts.",
+      "ageEnter": "Ich bin über 18 - weiter",
+      "ageLeave": "Seite verlassen",
+      "stats": [
+        {
+          "icon": "community",
+          "title": "Community Deals",
+          "text": "Exklusive Angebote für Mitglieder"
+        },
+        {
+          "icon": "stream",
+          "title": "Streamer Boni",
+          "text": "Beste Boni von deinen Lieblingsstreamern"
+        },
+        {
+          "icon": "star",
+          "title": "Galaxy Picks",
+          "text": "Handverlesene Top-Empfehlungen"
+        }
+      ],
+      "bonusTitle": "Top Casinos",
+      "storyEyebrow": "Das ist",
+      "storyTitleTop": "Galaxy",
+      "storyTitleBottom": "Casino",
+      "storyTitleAccent": "99",
+      "storyLead": "Streamer. Creator. Community zuerst.",
+      "storyParagraphs": [
+        "galaxycasino99 ist ein Twitch-Kanal für Casino-Entertainment mit Space-Vibe, starken Reaktionen und einer Community, die gemeinsam jeden Bonus, Hunt und Moment feiert.",
+        "Auf dem Kanal geht es nicht nur um Gewinne, sondern um Spannung, transparente Aktionen und einen Ort, an dem Zuschauer nah dran sind: live im Chat, bei neuen Deals und bei allem, was in der Galaxy passiert.",
+        "Diese Seite sammelt künftig die passenden Bonusangebote für die Community, sauber präsentiert und schnell vergleichbar."
+      ],
+      "storyFeatures": [
+        {
+          "icon": "bolt",
+          "title": "Gewinne, Spannung & epische Reactions",
+          "text": "Hier wird jeder Spin zum Highlight.",
+          "href": "#bonus"
+        },
+        {
+          "icon": "chat",
+          "title": "Live im Chat & immer mit euch",
+          "text": "Neue Deals, Challenges und Interaktion in Echtzeit.",
+          "href": "https://www.twitch.tv/casinogalaxy99"
+        },
+        {
+          "icon": "gift",
+          "title": "Exklusive Bonusangebote",
+          "text": "Für die Community - schnell, transparent, vergleichbar.",
+          "href": "#bonus"
+        }
+      ],
+      "storyLiveTitle": "Jetzt live auf Twitch",
+      "storyHandle": "casinogalaxy99",
+      "footerCopy": "Unabhängiger Streamer-Affiliate. Verhandelte Boni für die Galaxy-Community.",
+      "responsibleTitle": "18+ Nur. Glücksspiel kann süchtig machen.",
+      "responsibleCopy": "Bonus-Angebote unterliegen den Bedingungen des jeweiligen Casinos. Spiele nur, was du dir leisten kannst zu verlieren.",
+      "rights": "Alle Rechte vorbehalten.",
+      "terms": "AGB",
+      "privacy": "Datenschutz"
+    },
+    "EN": {
+      "nav": [
+        "Start",
+        "Bonus",
+        "Story"
+      ],
+      "heroEyebrow": "Exclusive Casino Bonus Offers",
+      "heroTitleTop": "Casino",
+      "heroTitleBottom": "Galaxy 99",
+      "heroCopy": "Bonus hub for the galaxycasino99 community: dark, galactic and ready for the best deals.",
+      "primaryCta": "Claim Bonus",
+      "primaryCtaHref": "#bonus",
+      "secondaryCta": "Watch Channel",
+      "secondaryCtaHref": "https://www.twitch.tv/casinogalaxy99",
+      "playOffer": "Play Now",
+      "detailsOffer": "Details",
+      "ageKicker": "Welcome to",
+      "ageTitle": "Casino Galaxy 99",
+      "ageCopy": "This page is intended only for people aged 18 or older.",
+      "ageNotice": "Please follow the legal requirements of your location.",
+      "ageEnter": "I am over 18 - continue",
+      "ageLeave": "Leave site",
+      "stats": [
+        {
+          "icon": "community",
+          "title": "Community Deals",
+          "text": "Exclusive offers for members"
+        },
+        {
+          "icon": "stream",
+          "title": "Streamer Bonuses",
+          "text": "Best bonuses from your favorite streamers"
+        },
+        {
+          "icon": "star",
+          "title": "Galaxy Picks",
+          "text": "Handpicked top recommendations"
+        }
+      ],
+      "bonusTitle": "Top Casinos",
+      "storyEyebrow": "This is",
+      "storyTitleTop": "Galaxy",
+      "storyTitleBottom": "Casino",
+      "storyTitleAccent": "99",
+      "storyLead": "Streamer. Creator. Community first.",
+      "storyParagraphs": [
+        "galaxycasino99 is a Twitch channel for casino entertainment with a space vibe, big reactions and a community that celebrates every bonus, hunt and moment together.",
+        "The channel is not just about wins. It is about excitement, transparent promotions and a place where viewers are close to the action: live in chat, around new deals and everything happening in the Galaxy.",
+        "This page will collect the right bonus offers for the community, presented cleanly and easy to compare."
+      ],
+      "storyFeatures": [
+        {
+          "icon": "bolt",
+          "title": "Wins, tension & epic reactions",
+          "text": "Every spin is built to feel like a highlight.",
+          "href": "#bonus"
+        },
+        {
+          "icon": "chat",
+          "title": "Live chat & close to the crew",
+          "text": "Fresh deals, challenges and real-time interaction.",
+          "href": "https://www.twitch.tv/casinogalaxy99"
+        },
+        {
+          "icon": "gift",
+          "title": "Exclusive bonus offers",
+          "text": "For the community - clean, fast and transparent.",
+          "href": "#bonus"
+        }
+      ],
+      "storyLiveTitle": "Now live on Twitch",
+      "storyHandle": "casinogalaxy99",
+      "footerCopy": "Independent streamer affiliate. Negotiated bonuses for the Galaxy community.",
+      "responsibleTitle": "18+ Only. Gambling can be addictive.",
+      "responsibleCopy": "Bonus offers are subject to the terms of each casino. Only play what you can afford to lose.",
+      "rights": "All rights reserved.",
+      "terms": "Terms",
+      "privacy": "Privacy"
+    }
+  }
+}
