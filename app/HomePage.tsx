@@ -409,30 +409,23 @@ function OfferCard({
 }
 
 function HighlightedHeroCopy({ text }: { text: string }) {
-  const parts = text.split(
-    /(galaxycasino99|Community|community|Bonus-Hub|Bonus hub|besten Deals|best deals|galaktisch|galactic)/gi,
-  );
+  const parts = text.split(/(casinogalaxy99|galaxycasino99)/gi);
 
   return (
     <>
       {parts.map((part, index) => {
         const normalized = part.toLowerCase();
-        const isGold =
-          normalized.includes("deal") ||
-          normalized.includes("bonus") ||
-          normalized.includes("galaktisch") ||
-          normalized.includes("galactic");
-        const isViolet =
-          normalized.includes("galaxycasino99") ||
-          normalized.includes("community");
+        const isBrand =
+          normalized.includes("casinogalaxy99") ||
+          normalized.includes("galaxycasino99");
 
-        if (!isGold && !isViolet) {
+        if (!isBrand) {
           return part;
         }
 
         return (
           <strong
-            className={isGold ? "hero-highlight-gold" : "hero-highlight-violet"}
+            className="hero-highlight-gold"
             key={`${part}-${index}`}
           >
             {part}
