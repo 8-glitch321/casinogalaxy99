@@ -132,6 +132,59 @@ function HeroIcon({ type }: { type: string }) {
   );
 }
 
+function CasinoFeatureIcon({ type }: { type: string }) {
+  if (type === "speed") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="8" />
+        <path d="m12 12 4-4" />
+      </svg>
+    );
+  }
+
+  if (type === "card") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="5" y="8" width="14" height="9" rx="1.5" />
+        <path d="M7 11h10" />
+      </svg>
+    );
+  }
+
+  if (type === "wager") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="8" />
+        <text x="12" y="13.5" textAnchor="middle">
+          50x
+        </text>
+      </svg>
+    );
+  }
+
+  if (type === "star") {
+    return <HeroIcon type="star" />;
+  }
+
+  return <HeroIcon type="gift" />;
+}
+
+function CopyIcon() {
+  return (
+    <svg
+      className="copy-code-icon"
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M8 8h11v11H8V8Z" />
+      <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+    </svg>
+  );
+}
+
 function OfferCard({
   casino,
   detailsLabel,
@@ -142,57 +195,122 @@ function OfferCard({
   playLabel: string;
 }) {
   const toggleId = `offer-toggle-${casino.id}`;
-  const features = [
-    casino.feature1,
-    casino.feature2,
-    casino.feature3,
-    casino.feature4,
-  ];
+  const [copiedSlot, setCopiedSlot] = useState("");
   const details = casino.detailsText
     .split(/\r?\n/)
     .map((detail) => detail.trim())
     .filter(Boolean);
+  const displayValue = (value: string) => value.trim() || "-";
+  const copyCode = async (code: string, slot: "registration" | "deposit") => {
+    const value = code.trim();
+
+    if (!value || value === "-") {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedSlot(slot);
+      window.setTimeout(() => setCopiedSlot(""), 1400);
+    } catch {
+      setCopiedSlot("");
+    }
+  };
+  const rank = Number.isFinite(casino.order) ? casino.order : 0;
+  const rankClass =
+    rank === 1
+      ? "is-gold"
+      : rank === 2
+        ? "is-silver"
+        : rank === 3
+          ? "is-bronze"
+          : "is-galaxy";
 
   return (
     <article className="offer-card">
       <input className="offer-toggle" id={toggleId} type="checkbox" />
       <div className="offer-main">
-        <div className="casino-logo flex h-full w-full items-center justify-center p-[2px]">
-          {casino.logoUrl ? (
-            <img
-              src={casino.logoUrl}
-              alt={casino.name || "Casino Logo"}
-              className="h-full w-full object-contain"
-            />
-          ) : (
-            "SOON"
-          )}
+        <div className="casino-identity">
+          <span className={`casino-rank-badge ${rankClass}`}>
+            {casino.order || "-"}
+          </span>
+          <div className="casino-logo">
+            {casino.logoUrl ? (
+              <img
+                src={casino.logoUrl}
+                alt={casino.name || "Casino Logo"}
+              />
+            ) : (
+              "SOON"
+            )}
+          </div>
         </div>
 
         <div className="bonus-title">
           <span className="text-slot">{casino.name || "-"}</span>
           <strong className="big-slot">{casino.bonus || "-"}</strong>
-          <small className="text-slot">{casino.description1 || "-"}</small>
         </div>
 
-        <div className="code-stack" aria-label="Bonus codes">
-          <div>
-            <span className="text-slot">{casino.description1 || "-"}</span>
-            <strong className="text-slot">{casino.description2 || "-"}</strong>
-          </div>
-          <div>
-            <span className="text-slot">{casino.name || "-"}</span>
-            <strong className="text-slot">{casino.bonus || "-"}</strong>
-          </div>
+        <div className="code-stack" aria-label="Bonus Codes">
+          <button
+            className="bonus-code-box is-registration"
+            onClick={() => {
+              void copyCode(displayValue(casino.description1), "registration");
+            }}
+            type="button"
+          >
+            <span>{casino.description1Label || "REGISTRIERUNGSCODE"}</span>
+            <strong>{displayValue(casino.description1)}</strong>
+            <em aria-hidden="true">
+              <CopyIcon />
+            </em>
+            {copiedSlot === "registration" ? (
+              <small>Kopiert</small>
+            ) : null}
+          </button>
+          <button
+            className="bonus-code-box is-deposit"
+            onClick={() => {
+              void copyCode(displayValue(casino.description2), "deposit");
+            }}
+            type="button"
+          >
+            <span>{casino.description2Label || "EINZAHLUNGSCODE"}</span>
+            <strong>{displayValue(casino.description2)}</strong>
+            <em aria-hidden="true">
+              <CopyIcon />
+            </em>
+            {copiedSlot === "deposit" ? (
+              <small>Kopiert</small>
+            ) : null}
+          </button>
         </div>
 
         <div className="offer-perks" aria-label="Bonus details">
-          {features.map((perk, index) => (
-            <div key={`${casino.id}-feature-${index}`}>
-              <span className="perk-icon">{["+", "%", "=", "x"][index] ?? "+"}</span>
-              <strong className="text-slot">{perk || "-"}</strong>
-            </div>
-          ))}
+          <div>
+            <span className="perk-icon">
+              <CasinoFeatureIcon type={casino.feature1Icon} />
+            </span>
+            <strong className="text-slot">{displayValue(casino.feature1)}</strong>
+          </div>
+          <div>
+            <span className="perk-icon">
+              <CasinoFeatureIcon type={casino.feature2Icon} />
+            </span>
+            <strong className="text-slot">{displayValue(casino.feature2)}</strong>
+          </div>
+          <div>
+            <span className="perk-icon">
+              <CasinoFeatureIcon type={casino.feature3Icon} />
+            </span>
+            <strong className="text-slot">{displayValue(casino.feature3)}</strong>
+          </div>
+          <div>
+            <span className="perk-icon">
+              <CasinoFeatureIcon type={casino.feature4Icon} />
+            </span>
+            <strong className="text-slot">{displayValue(casino.feature4)}</strong>
+          </div>
         </div>
 
         <div className="offer-actions">
@@ -390,10 +508,13 @@ export default function HomePage({ content }: { content: SiteContent }) {
             <HeroIcon type="diamond" />
             <span>{copy.heroEyebrow}</span>
           </p>
-          <h1>
-            {copy.heroTitleTop}
-            <span>{copy.heroTitleBottom}</span>
-          </h1>
+          <div className="hero-logo-lockup" aria-label={`${copy.heroTitleTop} ${copy.heroTitleBottom}`}>
+            <img
+              alt={`${copy.heroTitleTop} ${copy.heroTitleBottom}`}
+              className="animate-[casinoFloat_4s_ease-in-out_infinite] w-full h-auto object-contain"
+              src={content.brand.heroLogoUrl || content.brand.profileImageUrl}
+            />
+          </div>
           <p className="hero-copy">
             <HighlightedHeroCopy text={copy.heroCopy} />
           </p>

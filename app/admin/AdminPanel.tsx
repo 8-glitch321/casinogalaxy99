@@ -9,8 +9,15 @@ import type {
   StatItem,
   StoryFeature,
 } from "@/lib/siteContent";
-import type { FormEvent, ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import type { FormEvent, ReactNode, RefObject } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import ReactCrop, {
+  centerCrop,
+  convertToPixelCrop,
+  makeAspectCrop,
+  type Crop,
+  type PixelCrop,
+} from "react-image-crop";
 
 type Status = {
   type: "success" | "error" | "idle";
@@ -32,6 +39,24 @@ type ImageUploadConfig = {
   value: string;
   width: number;
 };
+
+type CropEditorState = {
+  aspect: number;
+  completedCrop?: PixelCrop;
+  config: ImageUploadConfig;
+  crop?: Crop;
+  imageUrl: string;
+  imageDisplayHeight?: number;
+  imageDisplayWidth?: number;
+  imageNaturalHeight?: number;
+  imageNaturalWidth?: number;
+  outputHeight: number;
+  outputWidth: number;
+  zoom: number;
+};
+
+type CasinoField = keyof Omit<Casino, "id">;
+type CasinoFieldValue = Casino[CasinoField];
 
 type SectionId =
   | "dashboard"
@@ -83,11 +108,17 @@ function createEmptyCasino(casinos: Casino[]): Casino {
     logoUrl: "",
     bonus: "",
     description1: "",
+    description1Label: "REGISTRIERUNGSCODE",
     description2: "",
+    description2Label: "EINZAHLUNGSCODE",
     feature1: "-",
+    feature1Icon: "gift",
     feature2: "-",
+    feature2Icon: "speed",
     feature3: "-",
+    feature3Icon: "card",
     feature4: "-",
+    feature4Icon: "wager",
     buttonText: "JETZT SPIELEN",
     buttonLink: "",
     detailsText: "",
@@ -279,27 +310,68 @@ function ImageUploadField({
   );
 }
 
-async function loadImage(file: File) {
-  const url = URL.createObjectURL(file);
-
-  try {
-    const image = new Image();
-    image.decoding = "async";
-    image.src = url;
-    await image.decode();
-    return image;
-  } finally {
-    URL.revokeObjectURL(url);
+function getUploadAspect(config: ImageUploadConfig) {
+  if (config.slot.includes("hero")) {
+    return 16 / 9;
   }
+
+  if (config.slot.includes("casino-logo")) {
+    return 6 / 5;
+  }
+
+  return 1;
 }
 
-async function resizeImage(
-  file: File,
-  width: number,
-  height: number,
-  fit: "cover" | "contain" = "cover",
+function getUploadOutputSize(config: ImageUploadConfig) {
+  if (config.slot.includes("hero")) {
+    return { outputWidth: 1200, outputHeight: 675 };
+  }
+
+  if (config.slot.includes("casino-logo")) {
+    return { outputWidth: 720, outputHeight: 600 };
+  }
+
+  const size = Math.min(1200, Math.max(512, Math.min(config.width, 800)));
+  return { outputWidth: size, outputHeight: size };
+}
+
+function createCenteredAspectCrop(
+  mediaWidth: number,
+  mediaHeight: number,
+  aspect: number,
 ) {
-  const image = await loadImage(file);
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: "%",
+        width: 86,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight,
+    ),
+    mediaWidth,
+    mediaHeight,
+  );
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+async function cropImageToBlob({
+  crop,
+  image,
+  outputHeight,
+  outputWidth,
+  zoom,
+}: {
+  crop: PixelCrop;
+  image: HTMLImageElement;
+  outputHeight: number;
+  outputWidth: number;
+  zoom: number;
+}) {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
 
@@ -307,55 +379,18 @@ async function resizeImage(
     throw new Error("Canvas konnte nicht initialisiert werden.");
   }
 
-  if (fit === "contain") {
-    const crop = getLogoCrop(image);
-    const scale = Math.min(width / crop.width, height / crop.height);
-    const targetWidth = Math.max(1, Math.round(crop.width * scale));
-    const targetHeight = Math.max(1, Math.round(crop.height * scale));
-
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = "high";
-    context.drawImage(
-      image,
-      crop.x,
-      crop.y,
-      crop.width,
-      crop.height,
-      0,
-      0,
-      targetWidth,
-      targetHeight,
-    );
-  } else {
-    canvas.width = width;
-    canvas.height = height;
-
-    const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
-    const sourceWidth = width / scale;
-    const sourceHeight = height / scale;
-    const sourceX = (image.naturalWidth - sourceWidth) / 2;
-    const sourceY = (image.naturalHeight - sourceHeight) / 2;
-
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = "high";
-    context.drawImage(
-      image,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      0,
-      0,
-      width,
-      height,
-    );
-  }
+  drawCropToCanvas({
+    canvas,
+    context,
+    crop,
+    image,
+    outputHeight,
+    outputWidth,
+    zoom,
+  });
 
   const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(resolve, "image/webp", 0.88);
+    canvas.toBlob(resolve, "image/webp", 0.9);
   });
 
   if (!blob) {
@@ -365,84 +400,56 @@ async function resizeImage(
   return blob;
 }
 
-function getLogoCrop(image: HTMLImageElement) {
-  const trimCanvas = document.createElement("canvas");
-  const trimContext = trimCanvas.getContext("2d", { willReadFrequently: true });
-  const width = image.naturalWidth;
-  const height = image.naturalHeight;
-
-  if (!trimContext || width < 4 || height < 4) {
-    return { x: 0, y: 0, width, height };
-  }
-
-  trimCanvas.width = width;
-  trimCanvas.height = height;
-  trimContext.drawImage(image, 0, 0);
-
-  const imageData = trimContext.getImageData(0, 0, width, height);
-  const data = imageData.data;
-  const cornerIndexes = [
+function drawCropToCanvas({
+  canvas,
+  context,
+  crop,
+  image,
+  outputHeight,
+  outputWidth,
+  zoom,
+}: {
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+  crop: PixelCrop;
+  image: HTMLImageElement;
+  outputHeight: number;
+  outputWidth: number;
+  zoom: number;
+}) {
+  const scaleX = image.naturalWidth / image.width;
+  const scaleY = image.naturalHeight / image.height;
+  const cropCenterX = (crop.x + crop.width / 2) * scaleX;
+  const cropCenterY = (crop.y + crop.height / 2) * scaleY;
+  const sourceWidth = (crop.width * scaleX) / zoom;
+  const sourceHeight = (crop.height * scaleY) / zoom;
+  const sourceX = clampNumber(
+    cropCenterX - sourceWidth / 2,
     0,
-    (width - 1) * 4,
-    (width * (height - 1)) * 4,
-    (width * height - 1) * 4,
-  ];
-  const background = cornerIndexes.reduce(
-    (color, index) => ({
-      red: color.red + data[index],
-      green: color.green + data[index + 1],
-      blue: color.blue + data[index + 2],
-      alpha: color.alpha + data[index + 3],
-    }),
-    { red: 0, green: 0, blue: 0, alpha: 0 },
+    Math.max(0, image.naturalWidth - sourceWidth),
   );
-  const bg = {
-    red: background.red / cornerIndexes.length,
-    green: background.green / cornerIndexes.length,
-    blue: background.blue / cornerIndexes.length,
-    alpha: background.alpha / cornerIndexes.length,
-  };
+  const sourceY = clampNumber(
+    cropCenterY - sourceHeight / 2,
+    0,
+    Math.max(0, image.naturalHeight - sourceHeight),
+  );
 
-  let minX = width;
-  let minY = height;
-  let maxX = -1;
-  let maxY = -1;
+  canvas.width = outputWidth;
+  canvas.height = outputHeight;
 
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const index = (y * width + x) * 4;
-      const alpha = data[index + 3];
-      const distance =
-        Math.abs(data[index] - bg.red) +
-        Math.abs(data[index + 1] - bg.green) +
-        Math.abs(data[index + 2] - bg.blue) +
-        Math.abs(alpha - bg.alpha) * 0.5;
-
-      if (alpha > 12 && distance > 28) {
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
-      }
-    }
-  }
-
-  if (maxX < minX || maxY < minY) {
-    return { x: 0, y: 0, width, height };
-  }
-
-  const padding = 3;
-  const x = Math.max(0, minX - padding);
-  const y = Math.max(0, minY - padding);
-  const cropWidth = Math.min(width - x, maxX - minX + 1 + padding * 2);
-  const cropHeight = Math.min(height - y, maxY - minY + 1 + padding * 2);
-
-  return {
-    x,
-    y,
-    width: cropWidth,
-    height: cropHeight,
-  };
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    outputWidth,
+    outputHeight,
+  );
 }
 
 export default function AdminPanel({
@@ -459,6 +466,8 @@ export default function AdminPanel({
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
   const [loading, setLoading] = useState(isAuthenticated);
   const [openCasinoIds, setOpenCasinoIds] = useState<string[]>([]);
+  const [cropEditor, setCropEditor] = useState<CropEditorState | null>(null);
+  const cropImageRef = useRef<HTMLImageElement | null>(null);
 
   const activeTitle = useMemo(
     () => sections.find((section) => section.id === activeSection)?.label,
@@ -486,6 +495,7 @@ export default function AdminPanel({
 
         if (!ignore) {
           const loadedContent = data as SiteContent;
+          console.log("Loaded content from Supabase:", loadedContent);
           setContent(loadedContent);
           setOpenCasinoIds(
             loadedContent.casinos[0]?.id ? [loadedContent.casinos[0].id] : [],
@@ -515,6 +525,14 @@ export default function AdminPanel({
     };
   }, [authenticated]);
 
+  useEffect(() => {
+    return () => {
+      if (cropEditor?.imageUrl) {
+        URL.revokeObjectURL(cropEditor.imageUrl);
+      }
+    };
+  }, [cropEditor?.imageUrl]);
+
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus({ type: "idle", message: "" });
@@ -542,6 +560,7 @@ export default function AdminPanel({
     nextContent: SiteContent,
     successMessage = "Inhalte wurden gespeichert.",
   ) {
+    console.log("Saving content to Supabase:", nextContent);
     setSaving(true);
     setStatus({ type: "idle", message: "" });
 
@@ -694,18 +713,28 @@ export default function AdminPanel({
     );
   }
 
-  function setCasino(
-    casinoIndex: number,
-    updater: (casino: Casino) => Casino,
+  function updateCasino(
+    casinoId: string,
+    field: CasinoField,
+    value: CasinoFieldValue,
   ) {
+    console.log("Casino field update:", casinoId, field, value);
     setContent((currentContent) => {
-      if (!currentContent?.casinos[casinoIndex]) {
+      if (!currentContent) {
         return currentContent;
       }
 
-      const next = cloneContent(currentContent);
-      next.casinos[casinoIndex] = updater(next.casinos[casinoIndex]);
-      return next;
+      return {
+        ...currentContent,
+        casinos: currentContent.casinos.map((casino) =>
+          casino.id === casinoId
+            ? {
+                ...casino,
+                [field]: value,
+              }
+            : casino,
+        ),
+      };
     });
   }
 
@@ -811,16 +840,45 @@ export default function AdminPanel({
       return;
     }
 
+    setStatus({ type: "idle", message: "" });
+
+    if (cropEditor?.imageUrl) {
+      URL.revokeObjectURL(cropEditor.imageUrl);
+    }
+
+    const aspect = getUploadAspect(config);
+    const { outputHeight, outputWidth } = getUploadOutputSize(config);
+    setCropEditor({
+      aspect,
+      config,
+      imageUrl: URL.createObjectURL(file),
+      outputHeight,
+      outputWidth,
+      zoom: 1,
+    });
+  }
+
+  async function uploadCroppedImage() {
+    if (!cropEditor || !cropImageRef.current || !cropEditor.completedCrop) {
+      setStatus({
+        type: "error",
+        message: "Bitte zuerst einen Bildausschnitt auswaehlen.",
+      });
+      return;
+    }
+
+    const { config } = cropEditor;
     setUploadingSlot(config.slot);
     setStatus({ type: "idle", message: "" });
 
     try {
-      const resizedBlob = await resizeImage(
-        file,
-        config.width,
-        config.height,
-        config.fit,
-      );
+      const resizedBlob = await cropImageToBlob({
+        crop: cropEditor.completedCrop,
+        image: cropImageRef.current,
+        outputHeight: cropEditor.outputHeight,
+        outputWidth: cropEditor.outputWidth,
+        zoom: cropEditor.zoom,
+      });
       const formData = new FormData();
       formData.append("slot", config.slot);
       formData.append(
@@ -839,6 +897,8 @@ export default function AdminPanel({
       }
 
       config.onUploaded(data.url);
+      URL.revokeObjectURL(cropEditor.imageUrl);
+      setCropEditor(null);
       setStatus({
         type: "success",
         message:
@@ -853,6 +913,14 @@ export default function AdminPanel({
     } finally {
       setUploadingSlot(null);
     }
+  }
+
+  function closeCropEditor() {
+    if (cropEditor?.imageUrl) {
+      URL.revokeObjectURL(cropEditor.imageUrl);
+    }
+
+    setCropEditor(null);
   }
 
   if (!authenticated) {
@@ -899,6 +967,7 @@ export default function AdminPanel({
   }
 
   return (
+    <>
     <main className="relative z-10 min-h-screen bg-[#030106] px-3 py-0 text-white [scrollbar-gutter:stable] sm:px-5 lg:px-8">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(118deg,rgba(155,60,255,0.14),transparent_36%),linear-gradient(242deg,rgba(255,191,46,0.07),transparent_32%),repeating-linear-gradient(90deg,rgba(255,255,255,0.022)_0_1px,transparent_1px_92px)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[linear-gradient(180deg,rgba(193,92,255,0.18),transparent)]" />
@@ -1036,7 +1105,7 @@ export default function AdminPanel({
                   addCasino,
                   deleteCasino,
                   duplicateCasino,
-                  setCasino,
+                  updateCasino,
                   toggleCasino,
                   openCasinoIds,
                   handleImageUpload,
@@ -1047,6 +1116,19 @@ export default function AdminPanel({
         </section>
       </div>
     </main>
+    {cropEditor ? (
+      <CropEditorModal
+        editor={cropEditor}
+        imageRef={cropImageRef}
+        saving={uploadingSlot === cropEditor.config.slot}
+        setEditor={setCropEditor}
+        onApply={() => {
+          void uploadCroppedImage();
+        }}
+        onCancel={closeCropEditor}
+      />
+    ) : null}
+    </>
   );
 }
 
@@ -1061,6 +1143,230 @@ function StatusMessage({ status }: { status: Status }) {
     >
       {status.message}
     </p>
+  );
+}
+
+function CropEditorModal({
+  editor,
+  imageRef,
+  onApply,
+  onCancel,
+  saving,
+  setEditor,
+}: {
+  editor: CropEditorState;
+  imageRef: RefObject<HTMLImageElement | null>;
+  onApply: () => void;
+  onCancel: () => void;
+  saving: boolean;
+  setEditor: (editor: CropEditorState) => void;
+}) {
+  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [viewportSize, setViewportSize] = useState({ height: 0, width: 0 });
+  const activeCrop = editor.completedCrop;
+  const cropSourceWidth =
+    activeCrop && editor.imageDisplayWidth && editor.imageNaturalWidth
+      ? Math.round((activeCrop.width * editor.imageNaturalWidth) / editor.imageDisplayWidth)
+      : 0;
+  const cropSourceHeight =
+    activeCrop && editor.imageDisplayHeight && editor.imageNaturalHeight
+      ? Math.round((activeCrop.height * editor.imageNaturalHeight) / editor.imageDisplayHeight)
+      : 0;
+
+  useEffect(() => {
+    function updateViewportSize() {
+      setViewportSize({
+        height: window.innerHeight,
+        width: window.innerWidth,
+      });
+    }
+
+    updateViewportSize();
+    window.addEventListener("resize", updateViewportSize);
+
+    return () => {
+      window.removeEventListener("resize", updateViewportSize);
+    };
+  }, []);
+
+  useEffect(() => {
+    const canvas = previewCanvasRef.current;
+    const image = imageRef.current;
+    const context = canvas?.getContext("2d");
+
+    if (!canvas || !context || !image || !activeCrop) {
+      return;
+    }
+
+    drawCropToCanvas({
+      canvas,
+      context,
+      crop: activeCrop,
+      image,
+      outputHeight: editor.outputHeight,
+      outputWidth: editor.outputWidth,
+      zoom: editor.zoom,
+    });
+  }, [activeCrop, editor.outputHeight, editor.outputWidth, editor.zoom, imageRef]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-black/78 px-3 py-5 text-white backdrop-blur-xl"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="grid w-full max-w-5xl gap-4 overflow-hidden rounded-3xl border border-violet-200/20 bg-[linear-gradient(145deg,rgba(20,8,33,0.98),rgba(5,2,9,0.98))] p-4 shadow-[0_34px_140px_rgba(0,0,0,0.72)] ring-1 ring-white/[0.04] sm:p-5">
+        <div className="flex flex-col gap-3 border-b border-white/[0.07] pb-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#ffbf2e]">
+              Bild zuschneiden
+            </p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight">
+              {editor.config.label}
+            </h2>
+            <p className="mt-1 text-sm text-[#bcaed0]">
+              Ausgabe: {editor.outputWidth} x {editor.outputHeight}px in Supabase Storage.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              className="min-h-10 rounded-xl border border-violet-200/20 bg-white/[0.04] px-4 text-xs font-black uppercase tracking-[0.08em] text-white transition hover:bg-white/[0.08]"
+              onClick={onCancel}
+              type="button"
+            >
+              Abbrechen
+            </button>
+            <button
+              className="min-h-10 rounded-xl bg-[linear-gradient(180deg,#ffe577,#ffbf2e_54%,#df7412)] px-5 text-xs font-black uppercase tracking-[0.08em] text-[#170b00] shadow-[0_16px_42px_rgba(255,191,46,0.22)] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60"
+              disabled={saving}
+              onClick={onApply}
+              type="button"
+            >
+              {saving ? "Laedt hoch..." : "Uebernehmen"}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="grid min-h-[320px] place-items-center overflow-hidden rounded-2xl border border-white/10 bg-black/45 p-3">
+            <ReactCrop
+              aspect={editor.aspect}
+              className="max-h-[64vh] max-w-full"
+              crop={editor.crop}
+              keepSelection
+              onChange={(pixelCrop, percentCrop) =>
+                setEditor({
+                  ...editor,
+                  completedCrop: pixelCrop,
+                  crop: percentCrop,
+                })
+              }
+              onComplete={(completedCrop) =>
+                setEditor({ ...editor, completedCrop })
+              }
+            >
+              <img
+                alt=""
+                className="max-h-[64vh] max-w-full select-none"
+                decoding="async"
+                ref={imageRef}
+                src={editor.imageUrl}
+                onLoad={(event) => {
+                  const image = event.currentTarget;
+                  const crop = createCenteredAspectCrop(
+                    image.width,
+                    image.height,
+                    editor.aspect,
+                  );
+                  const completedCrop = convertToPixelCrop(
+                    crop,
+                    image.width,
+                    image.height,
+                  );
+
+                  setEditor({
+                    ...editor,
+                    completedCrop,
+                    crop,
+                    imageDisplayHeight: image.height,
+                    imageDisplayWidth: image.width,
+                    imageNaturalHeight: image.naturalHeight,
+                    imageNaturalWidth: image.naturalWidth,
+                  });
+                }}
+              />
+            </ReactCrop>
+          </div>
+
+          <aside className="grid content-start gap-4 rounded-2xl border border-violet-200/15 bg-[#050208]/70 p-4">
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-black/45">
+              <canvas
+                className="block h-auto w-full"
+                height={editor.outputHeight}
+                ref={previewCanvasRef}
+                width={editor.outputWidth}
+              />
+            </div>
+
+            <label className="grid gap-3">
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-[#d9cdea]">
+                Zoom
+              </span>
+              <input
+                className="accent-[#ffbf2e]"
+                max="2"
+                min="1"
+                step="0.05"
+                type="range"
+                value={editor.zoom}
+                onChange={(event) =>
+                  setEditor({
+                    ...editor,
+                    zoom: Number.parseFloat(event.target.value),
+                  })
+                }
+              />
+              <span className="text-sm text-[#cfc2dc]">
+                {Math.round(editor.zoom * 100)}%
+              </span>
+            </label>
+
+            <div className="rounded-xl border border-[#ffbf2e]/20 bg-[#ffbf2e]/8 p-3 text-sm leading-6 text-[#ffe8a7]">
+              Ziehe den Rahmen mit Maus oder Touch. Profilbilder werden quadratisch,
+              Casino-Logos im Kartenformat und Hero-Bilder im 16:9 Format gespeichert.
+            </div>
+
+            <div className="grid gap-2 rounded-xl border border-violet-200/15 bg-black/28 p-3 text-xs text-[#d9cdea]">
+              <CropMetric label="Upload" value={`${editor.outputWidth} x ${editor.outputHeight}px`} />
+              <CropMetric label="Crop sichtbar" value={activeCrop ? `${Math.round(activeCrop.width)} x ${Math.round(activeCrop.height)}px` : "-"} />
+              <CropMetric label="Crop Original" value={activeCrop ? `${cropSourceWidth} x ${cropSourceHeight}px` : "-"} />
+              <CropMetric label="Bild sichtbar" value={editor.imageDisplayWidth && editor.imageDisplayHeight ? `${editor.imageDisplayWidth} x ${editor.imageDisplayHeight}px` : "-"} />
+              <CropMetric label="Originalbild" value={editor.imageNaturalWidth && editor.imageNaturalHeight ? `${editor.imageNaturalWidth} x ${editor.imageNaturalHeight}px` : "-"} />
+              <CropMetric label="Fenster" value={viewportSize.width ? `${viewportSize.width} x ${viewportSize.height}px` : "-"} />
+              <CropMetric
+                label="Format"
+                value={
+                  editor.aspect === 1
+                    ? "1:1"
+                    : editor.aspect === 16 / 9
+                      ? "16:9"
+                      : "6:5"
+                }
+              />
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CropMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] pb-2 last:border-b-0 last:pb-0">
+      <span className="font-bold text-[#9f91b1]">{label}</span>
+      <strong className="text-right font-black text-white">{value}</strong>
+    </div>
   );
 }
 
@@ -1180,6 +1486,24 @@ function renderBrand(
           onUpload={handleImageUpload}
         />
         <Field
+          label="Hero Logo/Grafik URL"
+          value={content.brand.heroLogoUrl}
+          onChange={(value) => setBrand("heroLogoUrl", value)}
+        />
+        <ImageUploadField
+          config={{
+            height: 650,
+            label: "Hero Logo/Grafik automatisch anpassen",
+            onUploaded: (url) => setBrand("heroLogoUrl", url),
+            slot: "brand-hero-logo",
+            value: content.brand.heroLogoUrl,
+            width: 1600,
+            fit: "contain",
+          }}
+          disabled={uploadingSlot === "brand-hero-logo"}
+          onUpload={handleImageUpload}
+        />
+        <Field
           label="Hero Bild URL"
           value={content.brand.heroImageUrl}
           onChange={(value) => setBrand("heroImageUrl", value)}
@@ -1215,6 +1539,13 @@ function renderBrand(
             <p className="font-black">{content.brand.name}</p>
             <p className="text-sm text-[#cfc2dc]">Live Brand Preview</p>
           </div>
+        </div>
+        <div className="rounded-xl border border-[#ffbf2e]/20 bg-black/40 p-3">
+          <img
+            alt=""
+            className="h-28 w-full object-contain"
+            src={content.brand.heroLogoUrl || content.brand.profileImageUrl}
+          />
         </div>
       </Card>
     </div>
@@ -1710,9 +2041,10 @@ function renderCasinos(
   addCasino: () => void,
   deleteCasino: (casinoIndex: number) => void,
   duplicateCasino: (casinoIndex: number) => void,
-  setCasino: (
-    casinoIndex: number,
-    updater: (casino: Casino) => Casino,
+  updateCasino: (
+    casinoId: string,
+    field: CasinoField,
+    value: CasinoFieldValue,
   ) => void,
   toggleCasino: (casinoId: string) => void,
   openCasinoIds: string[],
@@ -1817,51 +2149,56 @@ function renderCasinos(
                       label="Casino Name"
                       value={casino.name}
                       onChange={(value) =>
-                        setCasino(index, (current) => ({ ...current, name: value }))
+                        updateCasino(casino.id, "name", value)
                       }
                     />
                     <Field
                       label="Logo/Bild URL"
                       value={casino.logoUrl}
                       onChange={(value) =>
-                        setCasino(index, (current) => ({ ...current, logoUrl: value }))
+                        updateCasino(casino.id, "logoUrl", value)
                       }
                     />
                     <Field
                       label="Bonus Text"
                       value={casino.bonus}
                       onChange={(value) =>
-                        setCasino(index, (current) => ({ ...current, bonus: value }))
+                        updateCasino(casino.id, "bonus", value)
                       }
                     />
                     <Field
-                      label="Beschreibung Zeile 1"
+                      label="Code Box 1 Label"
+                      value={casino.description1Label}
+                      onChange={(value) =>
+                        updateCasino(casino.id, "description1Label", value)
+                      }
+                    />
+                    <Field
+                      label="Code Box 1 Wert"
                       value={casino.description1}
                       onChange={(value) =>
-                        setCasino(index, (current) => ({
-                          ...current,
-                          description1: value,
-                        }))
+                        updateCasino(casino.id, "description1", value)
                       }
                     />
                     <Field
-                      label="Beschreibung Zeile 2"
+                      label="Code Box 2 Label"
+                      value={casino.description2Label}
+                      onChange={(value) =>
+                        updateCasino(casino.id, "description2Label", value)
+                      }
+                    />
+                    <Field
+                      label="Code Box 2 Wert"
                       value={casino.description2}
                       onChange={(value) =>
-                        setCasino(index, (current) => ({
-                          ...current,
-                          description2: value,
-                        }))
+                        updateCasino(casino.id, "description2", value)
                       }
                     />
                     <Field
                       label="Ranking/Reihenfolge"
                       value={String(casino.order)}
                       onChange={(value) =>
-                        setCasino(index, (current) => ({
-                          ...current,
-                          order: Number.parseInt(value, 10) || 0,
-                        }))
+                        updateCasino(casino.id, "order", Number.parseInt(value, 10) || 0)
                       }
                     />
                   </div>
@@ -1871,10 +2208,7 @@ function renderCasinos(
                       height: 360,
                       label: `Casino ${index + 1} Logo automatisch anpassen`,
                       onUploaded: (url) =>
-                        setCasino(index, (current) => ({
-                          ...current,
-                          logoUrl: url,
-                        })),
+                        updateCasino(casino.id, "logoUrl", url),
                       slot: uploadSlot,
                       value: casino.logoUrl,
                       width: 640,
@@ -1885,21 +2219,35 @@ function renderCasinos(
                   />
 
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    {(["feature1", "feature2", "feature3", "feature4"] as const).map(
-                      (field, featureIndex) => (
+                    {(
+                      [
+                        ["feature1", "feature1Icon"],
+                        ["feature2", "feature2Icon"],
+                        ["feature3", "feature3Icon"],
+                        ["feature4", "feature4Icon"],
+                      ] as const
+                    ).map(([textField, iconField], featureIndex) => (
+                      <div
+                        className="grid gap-3 rounded-2xl border border-violet-200/15 bg-[#050208]/60 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                        key={`${casino.id}-${textField}`}
+                      >
                         <Field
-                          key={`${casino.id}-${field}`}
                           label={`Feature ${featureIndex + 1}`}
-                          value={casino[field]}
+                          value={casino[textField]}
                           onChange={(value) =>
-                            setCasino(index, (current) => ({
-                              ...current,
-                              [field]: value,
-                            }))
+                            updateCasino(casino.id, textField, value)
                           }
                         />
-                      ),
-                    )}
+                        <Field
+                          label={`Icon ${featureIndex + 1}`}
+                          value={casino[iconField]}
+                          placeholder="gift, speed, card, wager, star"
+                          onChange={(value) =>
+                            updateCasino(casino.id, iconField, value)
+                          }
+                        />
+                      </div>
+                    ))}
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
@@ -1907,20 +2255,14 @@ function renderCasinos(
                       label="Button Text"
                       value={casino.buttonText}
                       onChange={(value) =>
-                        setCasino(index, (current) => ({
-                          ...current,
-                          buttonText: value,
-                        }))
+                        updateCasino(casino.id, "buttonText", value)
                       }
                     />
                     <Field
                       label="Button Link"
                       value={casino.buttonLink}
                       onChange={(value) =>
-                        setCasino(index, (current) => ({
-                          ...current,
-                          buttonLink: value,
-                        }))
+                        updateCasino(casino.id, "buttonLink", value)
                       }
                     />
                   </div>
@@ -1930,10 +2272,7 @@ function renderCasinos(
                     textarea
                     value={casino.detailsText}
                     onChange={(value) =>
-                      setCasino(index, (current) => ({
-                        ...current,
-                        detailsText: value,
-                      }))
+                      updateCasino(casino.id, "detailsText", value)
                     }
                   />
 
@@ -1951,10 +2290,7 @@ function renderCasinos(
                           : "bg-red-400/10 text-red-200 ring-1 ring-red-300/25"
                       }`}
                       onClick={() =>
-                        setCasino(index, (current) => ({
-                          ...current,
-                          active: !current.active,
-                        }))
+                        updateCasino(casino.id, "active", !casino.active)
                       }
                       type="button"
                     >

@@ -1,6 +1,7 @@
 {
   "brand": {
     "name": "CasinoGalaxy99",
+    "heroLogoUrl": "/assets/CasinoHeader.png",
     "profileImageUrl": "/assets/casino-galaxy-profile.png",
     "heroImageUrl": "/assets/casino-galaxy-hero.png",
     "twitchUrl": "https://www.twitch.tv/casinogalaxy99"
@@ -59,11 +60,17 @@
       "logoUrl": "/uploads/admin/casino-logo-1.webp?v=1780590663497",
       "bonus": "300%",
       "description1": "-",
+      "description1Label": "REGISTRIERUNGSCODE",
       "description2": "-",
+      "description2Label": "EINZAHLUNGSCODE",
       "feature1": "-",
+      "feature1Icon": "gift",
       "feature2": "-",
+      "feature2Icon": "speed",
       "feature3": "-",
+      "feature3Icon": "card",
       "feature4": "-",
+      "feature4Icon": "wager",
       "buttonText": "JETZT SPIELEN",
       "buttonLink": "#bonus",
       "detailsText": "-\n-",

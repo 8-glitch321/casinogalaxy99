@@ -42,11 +42,17 @@ export type Casino = {
   logoUrl: string;
   bonus: string;
   description1: string;
+  description1Label: string;
   description2: string;
+  description2Label: string;
   feature1: string;
+  feature1Icon: string;
   feature2: string;
+  feature2Icon: string;
   feature3: string;
+  feature3Icon: string;
   feature4: string;
+  feature4Icon: string;
   buttonText: string;
   buttonLink: string;
   detailsText: string;
@@ -94,6 +100,7 @@ export type TranslationContent = {
 export type SiteContent = {
   brand: {
     name: string;
+    heroLogoUrl: string;
     profileImageUrl: string;
     heroImageUrl: string;
     twitchUrl: string;
@@ -166,10 +173,14 @@ export async function readSiteContent(): Promise<SiteContent> {
 
   if (data?.content) {
     const defaultContent = await readDefaultSiteContent();
-    return normalizeSiteContent(mergeSiteContent(defaultContent, data.content));
+    const content = normalizeSiteContent(mergeSiteContent(defaultContent, data.content));
+    console.log("Loaded content from Supabase:", content);
+    return content;
   }
 
   const defaultContent = await readDefaultSiteContent();
+  console.log("Loaded content from Supabase:", null);
+  console.log("Saving content to Supabase:", defaultContent);
   await writeSiteContent(defaultContent);
   return defaultContent;
 }
@@ -225,11 +236,13 @@ export function normalizeSiteContent(content: SiteContent): SiteContent {
   };
 
   if (Array.isArray(content.casinos)) {
+    const usedCasinoIds = new Set<string>();
+
     return {
       ...content,
       translations: normalizedTranslations,
       casinos: content.casinos.map((casino, index) =>
-        normalizeCasino(casino, index),
+        normalizeCasino(casino, index, usedCasinoIds),
       ),
     };
   }
@@ -242,12 +255,18 @@ export function normalizeSiteContent(content: SiteContent): SiteContent {
       name: offer.title === "-" ? "" : offer.title,
       logoUrl: offer.logoUrl,
       bonus: offer.highlight === "-" ? "" : offer.highlight,
-      description1: offer.codeLabel,
-      description2: offer.codeValue,
+      description1: offer.codeValue,
+      description1Label: offer.codeLabel || "REGISTRIERUNGSCODE",
+      description2: "",
+      description2Label: "EINZAHLUNGSCODE",
       feature1: offer.perks[0] ?? "-",
+      feature1Icon: "gift",
       feature2: offer.perks[1] ?? "-",
+      feature2Icon: "speed",
       feature3: offer.perks[2] ?? "-",
+      feature3Icon: "card",
       feature4: offer.perks[3] ?? "-",
+      feature4Icon: "wager",
       buttonText: "JETZT SPIELEN",
       buttonLink: offer.playHref,
       detailsText: offer.details.filter(Boolean).join("\n"),
@@ -271,18 +290,39 @@ function normalizeStats(
   }));
 }
 
-function normalizeCasino(casino: Partial<Casino>, index: number): Casino {
+function normalizeCasino(
+  casino: Partial<Casino>,
+  index: number,
+  usedCasinoIds: Set<string>,
+): Casino {
+  const baseId = casino.id?.trim() || `casino-${index + 1}`;
+  let id = baseId;
+  let suffix = 2;
+
+  while (usedCasinoIds.has(id)) {
+    id = `${baseId}-${suffix}`;
+    suffix += 1;
+  }
+
+  usedCasinoIds.add(id);
+
   return {
-    id: casino.id || `casino-${index + 1}`,
+    id,
     name: casino.name ?? "",
     logoUrl: casino.logoUrl ?? "",
     bonus: casino.bonus ?? "",
     description1: casino.description1 ?? "",
+    description1Label: casino.description1Label || "REGISTRIERUNGSCODE",
     description2: casino.description2 ?? "",
+    description2Label: casino.description2Label || "EINZAHLUNGSCODE",
     feature1: casino.feature1 || "-",
+    feature1Icon: casino.feature1Icon || "gift",
     feature2: casino.feature2 || "-",
+    feature2Icon: casino.feature2Icon || "speed",
     feature3: casino.feature3 || "-",
+    feature3Icon: casino.feature3Icon || "card",
     feature4: casino.feature4 || "-",
+    feature4Icon: casino.feature4Icon || "wager",
     buttonText: casino.buttonText || "JETZT SPIELEN",
     buttonLink: casino.buttonLink ?? "",
     detailsText: casino.detailsText ?? "",
@@ -294,6 +334,7 @@ function normalizeCasino(casino: Partial<Casino>, index: number): Casino {
 export async function writeSiteContent(content: SiteContent) {
   const supabase = getSupabaseClient();
   const normalizedContent = normalizeSiteContent(content);
+  console.log("Saving content to Supabase:", normalizedContent);
   const { error } = await supabase.from("site_content").upsert({
     id: siteContentRecordId,
     content: normalizedContent,
