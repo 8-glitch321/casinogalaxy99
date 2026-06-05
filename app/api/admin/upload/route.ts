@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const bucketName = "site-images";
+const STORAGE_BUCKET = "site-images";
 const maxUploadSize = 3 * 1024 * 1024;
 
 type UploadResponse =
@@ -24,15 +24,17 @@ function jsonResponse(body: UploadResponse, status = 200) {
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!supabaseUrl || !supabaseKey) {
     throw new Error(
       "Supabase ENV fehlt: NEXT_PUBLIC_SUPABASE_URL und NEXT_PUBLIC_SUPABASE_ANON_KEY muessen gesetzt sein.",
     );
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey, {
+  return createClient(supabaseUrl, supabaseKey, {
     auth: {
       persistSession: false,
     },
@@ -83,33 +85,10 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabaseClient();
-    const { data: bucket, error: bucketError } =
-      await supabase.storage.getBucket(bucketName);
-
-    if (bucketError) {
-      return jsonResponse(
-        {
-          success: false,
-          error: `Supabase Bucket "${bucketName}" konnte nicht geladen werden: ${bucketError.message}`,
-        },
-        500,
-      );
-    }
-
-    if (!bucket.public) {
-      return jsonResponse(
-        {
-          success: false,
-          error: `Supabase Bucket "${bucketName}" ist nicht public. Bitte Bucket auf public setzen, damit Bilder auf der Website angezeigt werden.`,
-        },
-        500,
-      );
-    }
-
     const storagePath = `admin/${slot}.webp`;
     const bytes = await file.arrayBuffer();
     const { error: uploadError } = await supabase.storage
-      .from(bucketName)
+      .from(STORAGE_BUCKET)
       .upload(storagePath, bytes, {
         cacheControl: "3600",
         contentType: file.type || "image/webp",
@@ -120,14 +99,14 @@ export async function POST(request: Request) {
       return jsonResponse(
         {
           success: false,
-          error: `Supabase Upload fehlgeschlagen: ${uploadError.message}`,
+          error: `Supabase Upload fehlgeschlagen. Verwendeter Bucket: "${STORAGE_BUCKET}". Fehler: ${uploadError.message}. Pruefe in Vercel NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY und redeploye nach ENV-Aenderungen.`,
         },
         500,
       );
     }
 
     const { data } = supabase.storage
-      .from(bucketName)
+      .from(STORAGE_BUCKET)
       .getPublicUrl(storagePath);
     const versionedUrl = `${data.publicUrl}?v=${Date.now()}`;
 
@@ -138,7 +117,7 @@ export async function POST(request: Request) {
         success: false,
         error:
           error instanceof Error
-            ? error.message
+            ? `Upload fehlgeschlagen. Verwendeter Bucket: "${STORAGE_BUCKET}". Fehler: ${error.message}`
             : "Upload fehlgeschlagen. Unbekannter Serverfehler.",
       },
       500,

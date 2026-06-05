@@ -20,6 +20,13 @@ on conflict (id) do update set
 drop policy if exists "Public read site images" on storage.objects;
 drop policy if exists "Anon upload site images" on storage.objects;
 drop policy if exists "Anon update site images" on storage.objects;
+drop policy if exists "Anon read site images bucket" on storage.buckets;
+
+create policy "Anon read site images bucket"
+on storage.buckets
+for select
+to anon
+using (id = 'site-images');
 
 create policy "Public read site images"
 on storage.objects
