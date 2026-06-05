@@ -16,10 +16,17 @@ export async function GET() {
   }
 
   try {
-    return NextResponse.json(await readSiteContent());
-  } catch {
+    return NextResponse.json(await readSiteContent(), {
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch (error) {
     return NextResponse.json(
-      { error: "Die Inhalte konnten nicht geladen werden." },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Die Inhalte konnten nicht geladen werden.",
+      },
       { status: 500 },
     );
   }
@@ -46,10 +53,18 @@ export async function PUT(request: Request) {
 
   try {
     await writeSiteContent(content);
-    return NextResponse.json({ success: true });
-  } catch {
     return NextResponse.json(
-      { error: "Speichern fehlgeschlagen. Auf Vercel ist das Dateisystem zur Laufzeit read-only." },
+      { success: true },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Speichern in Supabase fehlgeschlagen.",
+      },
       { status: 500 },
     );
   }

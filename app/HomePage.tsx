@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import type { CSSProperties } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { Casino, LanguageCode, SiteContent } from "@/lib/siteContent";
 
 const languages = [
@@ -11,208 +11,7 @@ const languages = [
 ];
 
 function GalaxyBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-
-    const context = canvas.getContext("2d", { alpha: true });
-    if (!context) {
-      return;
-    }
-
-    const reducedMotionQuery = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    );
-    const mobileQuery = window.matchMedia("(max-width: 768px)");
-    const stars: Array<{
-      x: number;
-      y: number;
-      z: number;
-      size: number;
-      drift: number;
-      twinkle: number;
-      hue: number;
-    }> = [];
-    let width = 0;
-    let height = 0;
-    let pixelRatio = 1;
-    let animationFrame = 0;
-    let start = performance.now();
-    let lastFrame = 0;
-    let shootingStarAt = start + 18000 + Math.random() * 16000;
-
-    const getSettings = () => {
-      const reducedMotion = reducedMotionQuery.matches;
-      const mobile = mobileQuery.matches;
-
-      return {
-        density: reducedMotion ? 0.16 : mobile ? 0.28 : 0.52,
-        mobile,
-        pixelRatio: Math.min(window.devicePixelRatio || 1, mobile ? 1.1 : 1.35),
-        reducedMotion,
-      };
-    };
-
-    const resize = () => {
-      const settings = getSettings();
-      width = window.innerWidth;
-      height = window.innerHeight;
-      pixelRatio = settings.pixelRatio;
-      canvas.width = Math.floor(width * pixelRatio);
-      canvas.height = Math.floor(height * pixelRatio);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      stars.length = 0;
-
-      const count = Math.min(
-        settings.mobile ? 42 : 88,
-        Math.floor(((width * height) / 14500) * settings.density),
-      );
-      for (let index = 0; index < count; index += 1) {
-        stars.push({
-          x: Math.random() * width,
-          y: Math.random() * height,
-          z: 0.25 + Math.random() * 0.75,
-          size: 0.32 + Math.random() * 0.95,
-          drift: 0.008 + Math.random() * 0.018,
-          twinkle: Math.random() * Math.PI * 2,
-          hue: 246 + Math.random() * 34,
-        });
-      }
-    };
-
-    const drawNebula = (time: number) => {
-      const { reducedMotion, mobile } = getSettings();
-      const slow = reducedMotion ? 0 : time * 0.000008;
-      const strength = mobile ? 0.54 : 0.74;
-      const nebulaOne = context.createRadialGradient(
-        width * (0.18 + Math.sin(slow) * 0.04),
-        height * (0.18 + Math.cos(slow * 1.2) * 0.035),
-        0,
-        width * 0.2,
-        height * 0.22,
-        Math.max(width, height) * 0.62,
-      );
-      nebulaOne.addColorStop(0, `rgba(143, 55, 255, ${0.12 * strength})`);
-      nebulaOne.addColorStop(0.42, `rgba(85, 22, 158, ${0.055 * strength})`);
-      nebulaOne.addColorStop(1, "rgba(0, 0, 0, 0)");
-
-      const nebulaTwo = context.createRadialGradient(
-        width * (0.78 + Math.cos(slow * 0.85) * 0.03),
-        height * (0.58 + Math.sin(slow) * 0.025),
-        0,
-        width * 0.76,
-        height * 0.62,
-        Math.max(width, height) * 0.54,
-      );
-      nebulaTwo.addColorStop(0, `rgba(193, 92, 255, ${0.085 * strength})`);
-      nebulaTwo.addColorStop(0.44, `rgba(255, 191, 46, ${0.014 * strength})`);
-      nebulaTwo.addColorStop(0.72, `rgba(77, 20, 145, ${0.035 * strength})`);
-      nebulaTwo.addColorStop(1, "rgba(0, 0, 0, 0)");
-
-      const horizon = context.createLinearGradient(0, height * 0.48, 0, height);
-      horizon.addColorStop(0, "rgba(0, 0, 0, 0)");
-      horizon.addColorStop(0.66, `rgba(126, 43, 224, ${0.025 * strength})`);
-      horizon.addColorStop(1, `rgba(255, 191, 46, ${0.01 * strength})`);
-
-      context.save();
-      context.globalCompositeOperation = "screen";
-      context.fillStyle = nebulaOne;
-      context.fillRect(0, 0, width, height);
-      context.fillStyle = nebulaTwo;
-      context.fillRect(0, 0, width, height);
-      context.fillStyle = horizon;
-      context.fillRect(0, 0, width, height);
-      context.restore();
-    };
-
-    const drawShootingStar = (time: number) => {
-      const { reducedMotion, mobile } = getSettings();
-      if (reducedMotion || mobile || time < shootingStarAt) {
-        return;
-      }
-
-      const duration = 1700;
-      const progress = Math.min((time - shootingStarAt) / duration, 1);
-      const x = width * (0.12 + progress * 0.38);
-      const y = height * (0.16 + progress * 0.13);
-      const tail = 104;
-      const opacity = Math.sin(progress * Math.PI) * 0.24;
-
-      context.save();
-      context.globalAlpha = opacity;
-      const gradient = context.createLinearGradient(x - tail, y - tail * 0.44, x, y);
-      gradient.addColorStop(0, "rgba(193, 92, 255, 0)");
-      gradient.addColorStop(0.72, "rgba(193, 92, 255, 0.45)");
-      gradient.addColorStop(1, "rgba(255, 255, 255, 0.9)");
-      context.strokeStyle = gradient;
-      context.lineWidth = 1.3;
-      context.beginPath();
-      context.moveTo(x - tail, y - tail * 0.44);
-      context.lineTo(x, y);
-      context.stroke();
-      context.restore();
-
-      if (progress >= 1) {
-        shootingStarAt = time + 26000 + Math.random() * 24000;
-      }
-    };
-
-    const render = (time: number) => {
-      const { reducedMotion } = getSettings();
-      if (!reducedMotion && time - lastFrame < 33) {
-        animationFrame = requestAnimationFrame(render);
-        return;
-      }
-      lastFrame = time;
-
-      context.clearRect(0, 0, width, height);
-      context.fillStyle = "rgba(4, 1, 9, 0.82)";
-      context.fillRect(0, 0, width, height);
-      drawNebula(time - start);
-
-      context.save();
-      context.globalCompositeOperation = "screen";
-      for (const star of stars) {
-        const drift = reducedMotion ? 0 : (time - start) * star.drift * 0.001;
-        const x = (star.x + drift * 38 * star.z) % (width + 12);
-        const y = (star.y + Math.sin(drift * 1.3 + star.twinkle) * 3.2 * star.z) % height;
-        const pulse = reducedMotion
-          ? 0.36
-          : 0.22 + Math.sin(time * 0.0007 + star.twinkle) * 0.1;
-        const alpha = Math.max(0.08, pulse * star.z);
-
-        context.beginPath();
-        context.fillStyle = `hsla(${star.hue}, 100%, 92%, ${alpha})`;
-        context.arc(x, y, star.size * star.z, 0, Math.PI * 2);
-        context.fill();
-      }
-      context.restore();
-
-      drawShootingStar(time);
-
-      if (!reducedMotion) {
-        animationFrame = requestAnimationFrame(render);
-      }
-    };
-
-    resize();
-    start = performance.now();
-    render(start);
-    window.addEventListener("resize", resize);
-
-    return () => {
-      cancelAnimationFrame(animationFrame);
-      window.removeEventListener("resize", resize);
-    };
-  }, []);
-
-  return <canvas className="galaxy-background" ref={canvasRef} aria-hidden="true" />;
+  return <div className="galaxy-background" aria-hidden="true" />;
 }
 
 function BrandAvatar({
@@ -438,7 +237,7 @@ function HighlightedHeroCopy({ text }: { text: string }) {
             className="hero-highlight-gold"
             key={`${part}-${index}`}
           >
-            {part}
+            CasinoGalaxy99
           </strong>
         );
       })}
@@ -465,16 +264,6 @@ export default function HomePage({ content }: { content: SiteContent }) {
     "--gold": content.colors.gold,
     "--red": content.colors.red,
   } as CSSProperties;
-
-  useEffect(() => {
-    document.body.classList.toggle("age-gate-lock", ageGateOpen);
-    document.documentElement.classList.toggle("age-gate-lock", ageGateOpen);
-
-    return () => {
-      document.body.classList.remove("age-gate-lock");
-      document.documentElement.classList.remove("age-gate-lock");
-    };
-  }, [ageGateOpen]);
 
   return (
     <>
@@ -624,9 +413,15 @@ export default function HomePage({ content }: { content: SiteContent }) {
             </a>
           </div>
         </div>
-        <div className="hero-info-panel" aria-hidden="true">
+        <div className="hero-info-panel" aria-label="Community Links">
           {copy.stats.map((stat) => (
-            <div key={stat.title}>
+            <a
+              className="hero-info-card"
+              href={stat.href || "#bonus"}
+              key={stat.title}
+              rel={stat.href?.startsWith("http") ? "noopener noreferrer" : undefined}
+              target={stat.href?.startsWith("http") ? "_blank" : undefined}
+            >
               <span>
                 <HeroIcon type={stat.icon} />
               </span>
@@ -634,7 +429,7 @@ export default function HomePage({ content }: { content: SiteContent }) {
                 <strong>{stat.title}</strong>
                 <p>{stat.text}</p>
               </section>
-            </div>
+            </a>
           ))}
         </div>
       </section>
