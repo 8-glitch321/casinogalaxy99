@@ -1,13 +1,43 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { adminCookieName, verifyAdminToken } from "@/lib/adminAuth";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+const bucketName = "site-images";
 const maxUploadSize = 3 * 1024 * 1024;
-const uploadDir = path.join(process.cwd(), "public", "uploads", "admin");
+
+type UploadResponse =
+  | {
+      success: true;
+      url: string;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+function jsonResponse(body: UploadResponse, status = 200) {
+  return NextResponse.json(body, { status });
+}
+
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      "Supabase ENV fehlt: NEXT_PUBLIC_SUPABASE_URL und NEXT_PUBLIC_SUPABASE_ANON_KEY muessen gesetzt sein.",
+    );
+  }
+
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+    },
+  });
+}
 
 async function isAuthenticated() {
   const cookieStore = await cookies();
@@ -15,51 +45,103 @@ async function isAuthenticated() {
 }
 
 export async function POST(request: Request) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Nicht autorisiert." }, { status: 401 });
-  }
+  try {
+    if (!(await isAuthenticated())) {
+      return jsonResponse({ success: false, error: "Nicht autorisiert." }, 401);
+    }
 
-  const formData = await request.formData().catch(() => null);
-  const file = formData?.get("file");
-  const slot = formData?.get("slot");
+    const formData = await request.formData().catch(() => null);
+    const file = formData?.get("file");
+    const slot = formData?.get("slot");
 
-  if (!(file instanceof File) || typeof slot !== "string") {
-    return NextResponse.json(
-      { error: "Upload-Daten sind unvollständig." },
-      { status: 400 },
+    if (!(file instanceof File) || typeof slot !== "string") {
+      return jsonResponse(
+        { success: false, error: "Upload-Daten sind unvollstaendig." },
+        400,
+      );
+    }
+
+    if (!/^[-a-z0-9]+$/i.test(slot)) {
+      return jsonResponse(
+        { success: false, error: "Ungueltiger Bild-Slot." },
+        400,
+      );
+    }
+
+    if (!file.type.startsWith("image/")) {
+      return jsonResponse(
+        { success: false, error: "Es sind nur Bilddateien erlaubt." },
+        400,
+      );
+    }
+
+    if (file.size > maxUploadSize) {
+      return jsonResponse(
+        { success: false, error: "Das optimierte Bild ist zu gross." },
+        400,
+      );
+    }
+
+    const supabase = getSupabaseClient();
+    const { data: bucket, error: bucketError } =
+      await supabase.storage.getBucket(bucketName);
+
+    if (bucketError) {
+      return jsonResponse(
+        {
+          success: false,
+          error: `Supabase Bucket "${bucketName}" konnte nicht geladen werden: ${bucketError.message}`,
+        },
+        500,
+      );
+    }
+
+    if (!bucket.public) {
+      return jsonResponse(
+        {
+          success: false,
+          error: `Supabase Bucket "${bucketName}" ist nicht public. Bitte Bucket auf public setzen, damit Bilder auf der Website angezeigt werden.`,
+        },
+        500,
+      );
+    }
+
+    const storagePath = `admin/${slot}.webp`;
+    const bytes = await file.arrayBuffer();
+    const { error: uploadError } = await supabase.storage
+      .from(bucketName)
+      .upload(storagePath, bytes, {
+        cacheControl: "3600",
+        contentType: file.type || "image/webp",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      return jsonResponse(
+        {
+          success: false,
+          error: `Supabase Upload fehlgeschlagen: ${uploadError.message}`,
+        },
+        500,
+      );
+    }
+
+    const { data } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(storagePath);
+    const versionedUrl = `${data.publicUrl}?v=${Date.now()}`;
+
+    return jsonResponse({ success: true, url: versionedUrl });
+  } catch (error) {
+    return jsonResponse(
+      {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Upload fehlgeschlagen. Unbekannter Serverfehler.",
+      },
+      500,
     );
   }
-
-  if (!/^[-a-z0-9]+$/i.test(slot)) {
-    return NextResponse.json(
-      { error: "Ungültiger Bild-Slot." },
-      { status: 400 },
-    );
-  }
-
-  if (!file.type.startsWith("image/")) {
-    return NextResponse.json(
-      { error: "Es sind nur Bilddateien erlaubt." },
-      { status: 400 },
-    );
-  }
-
-  if (file.size > maxUploadSize) {
-    return NextResponse.json(
-      { error: "Das optimierte Bild ist zu groß." },
-      { status: 400 },
-    );
-  }
-
-  await fs.mkdir(uploadDir, { recursive: true });
-
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const fileName = `${slot}.webp`;
-  const filePath = path.join(uploadDir, fileName);
-
-  await fs.writeFile(filePath, bytes);
-
-  return NextResponse.json({
-    url: `/uploads/admin/${fileName}?v=${Date.now()}`,
-  });
 }

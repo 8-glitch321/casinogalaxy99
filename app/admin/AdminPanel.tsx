@@ -17,6 +17,12 @@ type Status = {
   message: string;
 };
 
+type ApiResponseBody = {
+  error?: string;
+  success?: boolean;
+  url?: string;
+};
+
 type ImageUploadConfig = {
   fit?: "cover" | "contain";
   height: number;
@@ -92,6 +98,24 @@ function createEmptyCasino(casinos: Casino[]): Casino {
 
 function fieldId(label: string) {
   return label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+}
+
+async function readJsonResponse(response: Response): Promise<ApiResponseBody> {
+  const text = await response.text();
+
+  if (!text.trim()) {
+    throw new Error(
+      `Leere Antwort vom Server erhalten (${response.status}). Bitte API Route pruefen.`,
+    );
+  }
+
+  try {
+    return JSON.parse(text) as ApiResponseBody;
+  } catch {
+    throw new Error(
+      `Server hat keine gueltige JSON-Antwort gesendet (${response.status}).`,
+    );
+  }
 }
 
 function Card({
@@ -808,9 +832,9 @@ export default function AdminPanel({
         method: "POST",
         body: formData,
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
 
-      if (!response.ok || typeof data.url !== "string") {
+      if (!response.ok || data.success === false || typeof data.url !== "string") {
         throw new Error(data.error ?? "Upload fehlgeschlagen.");
       }
 
@@ -818,7 +842,7 @@ export default function AdminPanel({
       setStatus({
         type: "success",
         message:
-          "Bild wurde angepasst und hochgeladen. Bitte speichern, um die URL dauerhaft in der JSON zu sichern.",
+          "Bild wurde angepasst und in Supabase Storage hochgeladen. Bitte speichern, um die URL dauerhaft zu sichern.",
       });
     } catch (error) {
       setStatus({
