@@ -875,11 +875,11 @@ export default function AdminPanel({
   }
 
   return (
-    <main className="relative z-10 h-screen overflow-hidden bg-[#030106] px-3 py-0 text-white sm:px-5 lg:px-8">
+    <main className="relative z-10 min-h-screen bg-[#030106] px-3 py-0 text-white [scrollbar-gutter:stable] sm:px-5 lg:px-8">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(118deg,rgba(155,60,255,0.14),transparent_36%),linear-gradient(242deg,rgba(255,191,46,0.07),transparent_32%),repeating-linear-gradient(90deg,rgba(255,255,255,0.022)_0_1px,transparent_1px_92px)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[linear-gradient(180deg,rgba(193,92,255,0.18),transparent)]" />
-      <div className="relative mx-auto grid h-full w-full max-w-[1500px] grid-rows-[auto_minmax(0,1fr)] gap-5 overflow-y-auto py-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:grid-rows-1 lg:items-stretch lg:overflow-hidden">
-        <aside className="w-full shrink-0 overflow-y-auto rounded-3xl border border-violet-200/15 bg-[linear-gradient(180deg,rgba(18,8,30,0.96),rgba(6,2,12,0.96))] p-3 shadow-[0_30px_110px_rgba(0,0,0,0.44)] ring-1 ring-white/[0.04] backdrop-blur-xl lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-72 lg:min-w-72">
+      <div className="relative mx-auto grid min-h-screen w-full max-w-[1500px] gap-5 py-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start">
+        <aside className="w-full shrink-0 overflow-y-auto rounded-3xl border border-violet-200/15 bg-[linear-gradient(180deg,rgba(18,8,30,0.96),rgba(6,2,12,0.96))] p-3 shadow-[0_30px_110px_rgba(0,0,0,0.44)] ring-1 ring-white/[0.04] backdrop-blur-xl lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:w-72 lg:min-w-72">
           <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.035] px-4 py-5">
             <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-[#ffbf2e]/70 to-transparent" />
             <p className="text-xs font-black uppercase tracking-[0.24em] text-[#ffbf2e]">
@@ -933,7 +933,7 @@ export default function AdminPanel({
           </nav>
         </aside>
 
-        <section className="flex min-h-0 w-full min-w-0 flex-col overflow-hidden rounded-3xl border border-violet-200/15 bg-[linear-gradient(180deg,rgba(11,4,18,0.92),rgba(4,1,8,0.96))] shadow-[0_30px_110px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.04] backdrop-blur-xl lg:h-[calc(100vh-2rem)]">
+        <section className="min-w-0 w-full overflow-hidden rounded-3xl border border-violet-200/15 bg-[linear-gradient(180deg,rgba(11,4,18,0.92),rgba(4,1,8,0.96))] shadow-[0_30px_110px_rgba(0,0,0,0.42)] ring-1 ring-white/[0.04] backdrop-blur-xl">
           <header className="sticky top-0 z-20 flex shrink-0 flex-col gap-4 border-b border-violet-200/15 bg-[#090411]/90 p-5 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -966,7 +966,7 @@ export default function AdminPanel({
             </div>
           </header>
 
-          <div className="mx-auto grid w-full max-w-5xl flex-1 content-start gap-5 overflow-y-auto p-4 pb-28 [scrollbar-gutter:stable] sm:p-5 sm:pb-28 lg:p-6 lg:pb-28">
+          <div className="mx-auto grid w-full max-w-5xl content-start gap-5 p-4 pb-28 sm:p-5 sm:pb-28 lg:p-6 lg:pb-28">
             {activeSection === "dashboard" ? renderDashboard(content) : null}
             {activeSection === "brand"
               ? renderBrand(
