@@ -247,8 +247,43 @@ function OfferCard({
         </div>
 
         <div className="bonus-title">
-          <span className="text-slot">{casino.name || "-"}</span>
-          <strong className="big-slot">{casino.bonus || "-"}</strong>
+          <span
+            className="casino-card-name text-slot"
+            style={{
+              color: "#ffffff",
+              filter: "drop-shadow(0 0 8px rgba(193, 92, 255, 0.22))",
+              fontSize: "clamp(18px, 1.35vw, 24px)",
+              fontWeight: 850,
+              letterSpacing: "0.04em",
+              lineHeight: 1.05,
+              textTransform: "uppercase",
+            }}
+          >
+            {casino.name || "-"}
+          </span>
+          <span
+            className="casino-title-divider"
+            aria-hidden="true"
+            style={{
+              background: "rgba(193, 92, 255, 0.54)",
+              borderRadius: 999,
+              boxShadow: "none",
+              display: "block",
+              height: 1,
+              minHeight: 1,
+              width: 176,
+            }}
+          />
+          <strong
+            className="big-slot"
+            style={{
+              color: "#ffbf2e",
+              textShadow:
+                "0 0 14px rgba(255, 191, 46, 0.42), 0 0 28px rgba(255, 191, 46, 0.24)",
+            }}
+          >
+            {casino.bonus || "-"}
+          </strong>
         </div>
 
         <div className="code-stack" aria-label="Bonus Codes">
@@ -541,6 +576,23 @@ export default function HomePage({ content }: { content: SiteContent }) {
           </div>
         </div>
         <div className="hero-info-panel" aria-label="Community Links">
+          <section className="twitch-stream-card" aria-labelledby="twitch-stream-title">
+            <div className="twitch-stream-copy">
+              <span>CasinoGalaxy99</span>
+              <h2 id="twitch-stream-title">LIVE STREAM</h2>
+              <p>Schau CasinoGalaxy99 live auf Twitch</p>
+            </div>
+            <div className="twitch-stream-frame">
+              <iframe
+                src="https://player.twitch.tv/?channel=casinogalaxy99&parent=localhost&parent=casinogalaxybonus.com&parent=www.casinogalaxybonus.com&autoplay=false"
+                width="100%"
+                height="100%"
+                allowFullScreen
+                scrolling="no"
+                title="CasinoGalaxy99 Twitch Live Stream"
+              />
+            </div>
+          </section>
           {copy.stats.map((stat) => (
             <a
               className="hero-info-card"
