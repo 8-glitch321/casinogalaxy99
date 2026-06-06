@@ -508,11 +508,17 @@ export default function HomePage({ content }: { content: SiteContent }) {
             <HeroIcon type="diamond" />
             <span>{copy.heroEyebrow}</span>
           </p>
-          <div className="hero-logo-lockup" aria-label={`${copy.heroTitleTop} ${copy.heroTitleBottom}`}>
-            <img
-              alt={`${copy.heroTitleTop} ${copy.heroTitleBottom}`}
-              className="animate-[casinoFloat_4s_ease-in-out_infinite] w-full h-auto object-contain"
-              src={content.brand.heroLogoUrl || content.brand.profileImageUrl}
+          <div
+            className="hero-logo-lockup"
+            aria-label={`${copy.heroTitleTop} ${copy.heroTitleBottom}`}
+            role="img"
+          >
+            <span
+              aria-hidden="true"
+              className="hero-logo-image"
+              style={{
+                backgroundImage: `url("${content.brand.heroLogoUrl || content.brand.profileImageUrl}")`,
+              }}
             />
           </div>
           <p className="hero-copy">
