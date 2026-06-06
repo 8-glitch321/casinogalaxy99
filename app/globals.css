@@ -109,6 +109,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 104px;
   scrollbar-gutter: stable;
   background: #050208;
   overflow-x: clip;
@@ -204,7 +205,7 @@ a {
   z-index: 3;
   width: min(100%, 1540px);
   margin: 0 auto;
-  padding: 18px clamp(16px, 2.4vw, 32px) 48px;
+  padding: 0 clamp(16px, 2.4vw, 32px) 48px;
 }
 
 .site-shell::before {
@@ -476,7 +477,7 @@ a {
 
 .topbar {
   position: sticky;
-  top: 10px;
+  top: 0;
   z-index: 80;
   display: grid;
   grid-template-columns: minmax(220px, 0.75fr) minmax(210px, 0.82fr) minmax(0, auto) auto;
@@ -953,6 +954,12 @@ a {
   margin: clamp(18px, 2.4vw, 28px) clamp(18px, 2.6vw, 36px) clamp(18px, 2.4vw, 28px) 0;
 }
 
+#start,
+#bonus,
+#story {
+  scroll-margin-top: 104px;
+}
+
 .twitch-stream-card {
   position: relative;
   isolation: isolate;
@@ -1301,7 +1308,7 @@ a {
   display: block;
   width: min(520px, 84%);
   aspect-ratio: 1233 / 475;
-  margin: -2px 0 12px -8px;
+  margin: 8px 0 22px -8px;
   cursor: pointer;
   pointer-events: auto;
   transition:
@@ -2028,17 +2035,22 @@ a {
 
 .offer-perks {
   display: grid;
-  grid-template-columns: repeat(4, minmax(70px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
+  justify-self: stretch;
   min-width: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .offer-perks div {
   display: grid;
-  grid-template-rows: 30px minmax(38px, auto);
+  grid-template-rows: 32px minmax(38px, auto);
   align-content: start;
   justify-items: center;
-  gap: 7px;
+  min-width: 0;
+  overflow: hidden;
+  gap: 8px;
   min-height: 92px;
   padding: 12px 12px 10px;
   border-left: 1px solid rgba(193, 92, 255, 0.28);
@@ -2060,8 +2072,8 @@ a {
   display: grid;
   align-self: start;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   aspect-ratio: 1;
   border-radius: 50%;
   color: var(--gold);
@@ -2078,6 +2090,14 @@ a {
   stroke-linecap: round;
   stroke-linejoin: round;
   transform-origin: center;
+}
+
+.perk-icon img {
+  display: block;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(255, 191, 46, 0.65));
 }
 
 .perk-icon svg text {
@@ -2105,7 +2125,8 @@ a {
 .offer-card .bonus-code-box em,
 .offer-card .copy-code-icon,
 .offer-card .perk-icon,
-.offer-card .perk-icon svg {
+.offer-card .perk-icon svg,
+.offer-card .perk-icon img {
   color: var(--gold);
   stroke: var(--gold);
 }
@@ -2123,17 +2144,29 @@ a {
 
 .offer-perks strong {
   align-self: start;
+  justify-self: stretch;
   color: white;
-  font-size: clamp(10px, 0.72vw, 12px);
+  font-size: clamp(9.5px, 0.66vw, 11.5px);
   font-weight: 750;
   letter-spacing: 0.025em;
   text-transform: uppercase;
   line-height: 1.2;
   overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: auto;
   min-height: 38px;
   display: grid;
   place-items: center;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   text-align: center;
+}
+
+.offer-perks strong.text-slot {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .offer-actions {
@@ -2759,6 +2792,16 @@ a {
 }
 
 @media (max-width: 1280px) {
+  html {
+    scroll-padding-top: 178px;
+  }
+
+  #start,
+  #bonus,
+  #story {
+    scroll-margin-top: 178px;
+  }
+
   .topbar {
     grid-template-columns: 1fr auto;
     row-gap: 14px;
@@ -2814,7 +2857,7 @@ a {
 
   .hero-logo-lockup {
     width: min(500px, 82%);
-    margin: -2px 0 12px -6px;
+    margin: 8px 0 22px -6px;
   }
 }
 
@@ -2848,6 +2891,16 @@ a {
 }
 
 @media (max-width: 760px) {
+  html {
+    scroll-padding-top: 236px;
+  }
+
+  #start,
+  #bonus,
+  #story {
+    scroll-margin-top: 236px;
+  }
+
   .site-shell {
     padding: 0 14px 30px;
   }
@@ -2955,7 +3008,7 @@ a {
 
   .hero-logo-lockup {
     width: min(440px, 94%);
-    margin: -2px -1% 12px;
+    margin: 8px -1% 22px;
   }
 
   .hero-copy {
@@ -3328,12 +3381,12 @@ a {
 
   .hero-logo-lockup {
     width: min(400px, 98%);
-    margin: -2px -1% 12px;
+    margin: 8px -1% 22px;
   }
 
   .hero-copy {
     max-width: 100%;
-    margin-top: 18px;
+    margin-top: 0;
     font-size: clamp(15px, 4vw, 18px);
     line-height: 1.48;
   }
@@ -3566,6 +3619,16 @@ a {
 }
 
 @media (max-width: 480px) {
+  html {
+    scroll-padding-top: 220px;
+  }
+
+  #start,
+  #bonus,
+  #story {
+    scroll-margin-top: 220px;
+  }
+
   .site-shell {
     padding-inline: 10px;
   }
@@ -3776,6 +3839,8 @@ a {
   .hero-logo-lockup {
     width: min(260px, 100%);
     margin-inline: 0;
+    margin-top: 8px;
+    margin-bottom: 20px;
   }
 
   .hero-copy,

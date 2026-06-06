@@ -118,7 +118,7 @@ function createEmptyCasino(casinos: Casino[]): Casino {
     feature3: "-",
     feature3Icon: "card",
     feature4: "-",
-    feature4Icon: "wager",
+    feature4Icon: "",
     buttonText: "JETZT SPIELEN",
     buttonLink: "",
     detailsText: "",
@@ -1657,6 +1657,29 @@ function renderHomeLanguage(
             }
           />
         </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field
+            label="Stream Kicker"
+            value={copy.twitchStreamKicker}
+            onChange={(value) =>
+              setTranslation(language, "twitchStreamKicker", value)
+            }
+          />
+          <Field
+            label="Stream Titel"
+            value={copy.twitchStreamTitle}
+            onChange={(value) =>
+              setTranslation(language, "twitchStreamTitle", value)
+            }
+          />
+          <Field
+            label="Stream Untertitel"
+            value={copy.twitchStreamSubtitle}
+            onChange={(value) =>
+              setTranslation(language, "twitchStreamSubtitle", value)
+            }
+          />
+        </div>
       </Card>
 
       <Card title="Navigation & Bonus Labels">
@@ -2218,13 +2241,12 @@ function renderCasinos(
                     onUpload={handleImageUpload}
                   />
 
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {(
                       [
                         ["feature1", "feature1Icon"],
                         ["feature2", "feature2Icon"],
                         ["feature3", "feature3Icon"],
-                        ["feature4", "feature4Icon"],
                       ] as const
                     ).map(([textField, iconField], featureIndex) => (
                       <div
@@ -2241,7 +2263,7 @@ function renderCasinos(
                         <Field
                           label={`Icon ${featureIndex + 1}`}
                           value={casino[iconField]}
-                          placeholder="gift, speed, card, wager, star"
+                          placeholder="gift, speed, card, star"
                           onChange={(value) =>
                             updateCasino(casino.id, iconField, value)
                           }

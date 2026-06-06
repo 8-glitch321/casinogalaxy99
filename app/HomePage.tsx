@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import type { CSSProperties } from "react";
+import type { CSSProperties, MouseEvent } from "react";
 import { useState } from "react";
 import type { Casino, LanguageCode, SiteContent } from "@/lib/siteContent";
 
@@ -133,40 +133,16 @@ function HeroIcon({ type }: { type: string }) {
 }
 
 function CasinoFeatureIcon({ type }: { type: string }) {
-  if (type === "speed") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="8" />
-        <path d="m12 12 4-4" />
-      </svg>
-    );
-  }
+  const iconSrc =
+    {
+      card: "/assets/perk-icons/card.svg",
+      gift: "/assets/perk-icons/gift.svg",
+      speed: "/assets/perk-icons/speed.svg",
+      star: "/assets/perk-icons/star.svg",
+      wager: "/assets/perk-icons/wager.svg",
+    }[type] ?? "/assets/perk-icons/gift.svg";
 
-  if (type === "card") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="5" y="8" width="14" height="9" rx="1.5" />
-        <path d="M7 11h10" />
-      </svg>
-    );
-  }
-
-  if (type === "wager") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="8" />
-        <text x="12" y="13.5" textAnchor="middle">
-          50x
-        </text>
-      </svg>
-    );
-  }
-
-  if (type === "star") {
-    return <HeroIcon type="star" />;
-  }
-
-  return <HeroIcon type="gift" />;
+  return <img src={iconSrc} alt="" aria-hidden="true" />;
 }
 
 function CopyIcon() {
@@ -185,13 +161,36 @@ function CopyIcon() {
   );
 }
 
+const casinoTextTranslations: Record<string, string> = {
+  "JETZT SPIELEN": "PLAY NOW",
+  "REGISTRIERUNGSCODE": "REGISTRATION CODE",
+  "EINZAHLUNGSCODE": "DEPOSIT CODE",
+  "HOHER RTP": "HIGH RTP",
+  "50 FREISPIELE": "50 FREE SPINS",
+  "VIELE EINZAHLUNGSMETHODEN": "MANY PAYMENT METHODS",
+  "BONUS-WAGER": "BONUS WAGER",
+  "50X BONUS-WAGER": "50X BONUS WAGER",
+};
+
+function translateCasinoText(value: string, language: LanguageCode) {
+  const normalized = value.trim().toUpperCase();
+
+  if (language !== "EN" || !normalized || normalized === "-") {
+    return value;
+  }
+
+  return casinoTextTranslations[normalized] ?? value;
+}
+
 function OfferCard({
   casino,
   detailsLabel,
+  language,
   playLabel,
 }: {
   casino: Casino;
   detailsLabel: string;
+  language: LanguageCode;
   playLabel: string;
 }) {
   const toggleId = `offer-toggle-${casino.id}`;
@@ -201,6 +200,9 @@ function OfferCard({
     .map((detail) => detail.trim())
     .filter(Boolean);
   const displayValue = (value: string) => value.trim() || "-";
+  const displayCasinoText = (value: string) =>
+    translateCasinoText(displayValue(value), language);
+  const playText = translateCasinoText(casino.buttonText || playLabel, language);
   const copyCode = async (code: string, slot: "registration" | "deposit") => {
     const value = code.trim();
 
@@ -241,7 +243,7 @@ function OfferCard({
                 alt={casino.name || "Casino Logo"}
               />
             ) : (
-              "SOON"
+              language === "EN" ? "SOON" : "BALD"
             )}
           </div>
         </div>
@@ -294,13 +296,13 @@ function OfferCard({
             }}
             type="button"
           >
-            <span>{casino.description1Label || "REGISTRIERUNGSCODE"}</span>
+            <span>{displayCasinoText(casino.description1Label || "REGISTRIERUNGSCODE")}</span>
             <strong>{displayValue(casino.description1)}</strong>
             <em aria-hidden="true">
               <CopyIcon />
             </em>
             {copiedSlot === "registration" ? (
-              <small>Kopiert</small>
+              <small>{language === "EN" ? "Copied" : "Kopiert"}</small>
             ) : null}
           </button>
           <button
@@ -310,13 +312,13 @@ function OfferCard({
             }}
             type="button"
           >
-            <span>{casino.description2Label || "EINZAHLUNGSCODE"}</span>
+            <span>{displayCasinoText(casino.description2Label || "EINZAHLUNGSCODE")}</span>
             <strong>{displayValue(casino.description2)}</strong>
             <em aria-hidden="true">
               <CopyIcon />
             </em>
             {copiedSlot === "deposit" ? (
-              <small>Kopiert</small>
+              <small>{language === "EN" ? "Copied" : "Kopiert"}</small>
             ) : null}
           </button>
         </div>
@@ -326,31 +328,25 @@ function OfferCard({
             <span className="perk-icon">
               <CasinoFeatureIcon type={casino.feature1Icon} />
             </span>
-            <strong className="text-slot">{displayValue(casino.feature1)}</strong>
+            <strong className="text-slot">{displayCasinoText(casino.feature1)}</strong>
           </div>
           <div>
             <span className="perk-icon">
               <CasinoFeatureIcon type={casino.feature2Icon} />
             </span>
-            <strong className="text-slot">{displayValue(casino.feature2)}</strong>
+            <strong className="text-slot">{displayCasinoText(casino.feature2)}</strong>
           </div>
           <div>
             <span className="perk-icon">
               <CasinoFeatureIcon type={casino.feature3Icon} />
             </span>
-            <strong className="text-slot">{displayValue(casino.feature3)}</strong>
-          </div>
-          <div>
-            <span className="perk-icon">
-              <CasinoFeatureIcon type={casino.feature4Icon} />
-            </span>
-            <strong className="text-slot">{displayValue(casino.feature4)}</strong>
+            <strong className="text-slot">{displayCasinoText(casino.feature3)}</strong>
           </div>
         </div>
 
         <div className="offer-actions">
           <a href={casino.buttonLink || "#bonus"} className="play-button">
-            <span>{casino.buttonText || playLabel}</span>
+            <span>{playText}</span>
           </a>
           <label className="details-button" htmlFor={toggleId}>
             <span>{detailsLabel}</span>
@@ -362,7 +358,9 @@ function OfferCard({
       <div className="offer-copy">
         <div>
           {(details.length > 0 ? details : ["-"]).map((detail, index) => (
-            <p key={`${casino.id}-detail-${index}`}>{detail}</p>
+            <p key={`${casino.id}-detail-${index}`}>
+              {displayCasinoText(detail)}
+            </p>
           ))}
         </div>
       </div>
@@ -417,6 +415,42 @@ export default function HomePage({ content }: { content: SiteContent }) {
     "--gold": content.colors.gold,
     "--red": content.colors.red,
   } as CSSProperties;
+  const scrollToSection = (
+    event: MouseEvent<HTMLAnchorElement>,
+    targetId: string,
+  ) => {
+    event.preventDefault();
+
+    const target = document.getElementById(targetId);
+    const header = document.querySelector<HTMLElement>(".topbar");
+
+    if (!target) {
+      return;
+    }
+
+    if (targetId === "start") {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+      window.history.replaceState(null, "", "#start");
+      return;
+    }
+
+    const headerHeight = header?.getBoundingClientRect().height ?? 0;
+    const viewportGap = 22;
+    const top =
+      target.getBoundingClientRect().top +
+      window.scrollY -
+      headerHeight -
+      viewportGap;
+
+    window.scrollTo({
+      top: Math.max(0, top),
+      behavior: "smooth",
+    });
+    window.history.replaceState(null, "", `#${targetId}`);
+  };
 
   return (
     <>
@@ -475,9 +509,15 @@ export default function HomePage({ content }: { content: SiteContent }) {
         </a>
 
         <nav className="main-nav" aria-label="Hauptnavigation">
-          <a href="#start">{copy.nav[0]}</a>
-          <a href="#bonus">{copy.nav[1]}</a>
-          <a href="#story">{copy.nav[2]}</a>
+          <a href="#start" onClick={(event) => scrollToSection(event, "start")}>
+            {copy.nav[0]}
+          </a>
+          <a href="#bonus" onClick={(event) => scrollToSection(event, "bonus")}>
+            {copy.nav[1]}
+          </a>
+          <a href="#story" onClick={(event) => scrollToSection(event, "story")}>
+            {copy.nav[2]}
+          </a>
         </nav>
 
         <div className="header-socials" aria-label="Social Links">
@@ -578,9 +618,9 @@ export default function HomePage({ content }: { content: SiteContent }) {
         <div className="hero-info-panel" aria-label="Community Links">
           <section className="twitch-stream-card" aria-labelledby="twitch-stream-title">
             <div className="twitch-stream-copy">
-              <span>CasinoGalaxy99</span>
-              <h2 id="twitch-stream-title">LIVE STREAM</h2>
-              <p>Schau CasinoGalaxy99 live auf Twitch</p>
+              <span>{copy.twitchStreamKicker}</span>
+              <h2 id="twitch-stream-title">{copy.twitchStreamTitle}</h2>
+              <p>{copy.twitchStreamSubtitle}</p>
             </div>
             <div className="twitch-stream-frame">
               <iframe
@@ -625,6 +665,7 @@ export default function HomePage({ content }: { content: SiteContent }) {
             detailsLabel={copy.detailsOffer}
             key={casino.id}
             casino={casino}
+            language={selectedLanguage}
             playLabel={copy.playOffer}
           />
         ))}

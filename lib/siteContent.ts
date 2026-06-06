@@ -70,6 +70,9 @@ export type TranslationContent = {
   primaryCtaHref: string;
   secondaryCta: string;
   secondaryCtaHref: string;
+  twitchStreamKicker: string;
+  twitchStreamTitle: string;
+  twitchStreamSubtitle: string;
   playOffer: string;
   detailsOffer: string;
   ageKicker: string;
