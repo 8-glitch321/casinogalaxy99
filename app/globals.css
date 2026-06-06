@@ -1148,7 +1148,7 @@ a {
   align-items: center;
   gap: 14px;
   min-height: 48px;
-  margin: 0 0 8px 14px;
+  margin: -4px 0 10px 14px;
   padding: 0 25px;
   border: 1px solid rgba(193, 92, 255, 0.48);
   border-radius: 999px;
@@ -1217,9 +1217,9 @@ a {
   position: relative;
   isolation: isolate;
   display: block;
-  width: min(640px, 96%);
+  width: min(430px, 72%);
   aspect-ratio: 1233 / 475;
-  margin: -16px 0 12px -8px;
+  margin: 0 0 16px -6px;
   cursor: pointer;
   pointer-events: auto;
   transition:
@@ -2687,8 +2687,8 @@ a {
   }
 
   .hero-logo-lockup {
-    width: min(600px, 94%);
-    margin: -14px 0 12px -6px;
+    width: min(400px, 72%);
+    margin: 0 0 16px -4px;
   }
 }
 
@@ -2828,8 +2828,8 @@ a {
   }
 
   .hero-logo-lockup {
-    width: min(540px, 108%);
-    margin: -10px -4% 10px;
+    width: min(360px, 92%);
+    margin: 0 -2% 14px;
   }
 
   .hero-copy {
@@ -3199,8 +3199,8 @@ a {
   }
 
   .hero-logo-lockup {
-    width: min(500px, 112%);
-    margin: -10px -6% 10px;
+    width: min(340px, 96%);
+    margin: 0 -2% 14px;
   }
 
   .hero-copy {
@@ -3450,7 +3450,7 @@ a {
   }
 
   .hero-logo-lockup {
-    width: min(430px, 112%);
+    width: min(300px, 96%);
   }
 
   .hero-copy {
@@ -3563,7 +3563,7 @@ a {
   }
 
   .hero-logo-lockup {
-    width: min(390px, 112%);
+    width: min(280px, 96%);
   }
 
   .primary-button,
@@ -3623,7 +3623,7 @@ a {
   }
 
   .hero-logo-lockup {
-    width: 100%;
+    width: min(260px, 100%);
     margin-inline: 0;
   }
 
